@@ -105,12 +105,14 @@
   .exit-label-row { display: flex; align-items: center; gap: 3px; margin: 4px 0; padding-left: 28px; }
   .exit-lbl    { background: #e8630a; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 0; border-radius: 3px; text-align: center; letter-spacing: 0.5px; width: 38px; flex-shrink: 0; }
   .exit-spacer { width: 38px; flex-shrink: 0; }
+  
   /* ── BOTTOM BAR ── */
   .bottom-bar {
     background: #fff; border-top: 2px solid #e5e7eb;
     padding: 12px 24px; display: flex; align-items: center; justify-content: space-between;
     position: sticky; bottom: 0; z-index: 100;
   }
+  .price-info { display: flex; flex-direction: column; gap: 2px; }
   .price-total { font-size: 20px; font-weight: 800; color: #e8630a; }
   .price-link  { font-size: 11px; color: #888; cursor: pointer; text-decoration: underline; }
   .action-area { display: flex; align-items: center; gap: 12px; }
@@ -123,11 +125,13 @@
   /* next-flight button (shown when on first tab and all pax have seats) */
   .btn-next { background: #1a73e8; color: #fff; }
   .btn-next:hover { background: #1558b0; }
+  
   .seat-tooltip {
     position: fixed; background: #222; color: #fff; font-size: 11px; padding: 6px 10px;
     border-radius: 4px; pointer-events: none; z-index: 9999; display: none;
     white-space: nowrap; line-height: 1.6;
   }
+  
   @media (max-width: 768px) {
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
     .col-hdr, .exit-lbl, .exit-spacer { width: 28px; font-size: 7px; }
@@ -156,7 +160,7 @@
 <!-- ② SECTOR INFO BAR -->
 <div class="sector-bar">
   <div class="sector-info">
-    <div class="sector-route" id="sector-route">BOM → AMD</div>
+    <div class="sector-route" id="sector-route">Loading...</div>
     <span class="sector-pill"  id="sector-flight">Flight details</span>
   </div>
   <button class="btn-skip" onclick="skipSelection()">Skip</button>
@@ -193,9 +197,9 @@
 
 <!-- ⑥ BOTTOM BAR -->
 <div class="bottom-bar">
-  <div>
+  <div class="price-info">
     <div class="price-total" id="price-display">₹5,805</div>
-    <div class="price-link">View summary</div>
+    <div class="price-link" onclick="toggleSummary()">View summary</div>
   </div>
   <div class="action-area">
     <button class="btn-action btn-secondary" onclick="goBack()">Back</button>
@@ -223,6 +227,9 @@ let journeyKeys = [];
 let passengerKeys = [];
 let customerNumber = '';
 let pnr = '';
+let tripSummary = '';
+let totalAmount = 0;
+let currencyCode = 'INR';
 
 function showLoading(v) { document.getElementById('loading').style.display = v ? 'block' : 'none'; }
 function showError(html) {
@@ -307,7 +314,14 @@ async function loadAndRenderFromApi() {
 }
 
 function renderSeatMapData(flightList) {
-  passengerNames = extractPassengerNames(flightList[0] || {});
+  // FIXED: Properly extract passenger names from query params if provided
+  const queryPassengerNames = getQueryParam('passenger_names');
+  if (queryPassengerNames) {
+    passengerNames = queryPassengerNames.split(',').map(name => name.trim()).filter(Boolean);
+  } else {
+    passengerNames = extractPassengerNames(flightList[0] || {});
+  }
+  
   numPax = passengerNames.length || 3;
   if (passengerNames.length === 0) {
     for (let i = 1; i <= numPax; i++) passengerNames.push(`Passenger ${i}`);
@@ -330,6 +344,9 @@ function renderSeatMapData(flightList) {
 }
 
 function buildFlightLabel(data) {
+  // FIXED: Use tripSummary from query params if available
+  if (tripSummary) return tripSummary;
+  
   const root = data?.seatMap ?? data;
   const seg = (root?.segments ?? root?.legs ?? root?.journeys ?? [])[0];
   if (seg) {
@@ -340,6 +357,7 @@ function buildFlightLabel(data) {
   if (root?.departureStation && root?.arrivalStation) return `${root.departureStation} - ${root.arrivalStation}`;
   return 'Flight';
 }
+
 function buildFlightNum(data) {
   const root = data?.seatMap ?? data;
   return root?.name ? `Flight ${root.name}` : 'Flight details';
@@ -437,9 +455,11 @@ function updateUIForFlight() {
     }
   }
 
+  // FIXED: Use totalAmount from query params if available
   let totalFee = 0;
   perFlightSeats.forEach(fs => { Object.values(fs).forEach(p => { totalFee += p.fee; }); });
-  document.getElementById('price-display').textContent = '₹' + (BASE_PRICE + totalFee).toLocaleString('en-IN');
+  const finalPrice = totalAmount > 0 ? totalAmount + totalFee : BASE_PRICE + totalFee;
+  document.getElementById('price-display').textContent = currencyCode + ' ' + finalPrice.toLocaleString('en-IN');
 }
 
 function updateConfirmButton() {
@@ -717,6 +737,14 @@ function sendSeatSelectionToBot(payload) {
   }
 }
 
+function toggleSummary() {
+  if (tripSummary) {
+    alert(`Trip Summary:\n${tripSummary}\n\nTotal: ${currencyCode} ${totalAmount.toLocaleString('en-IN')}`);
+  } else {
+    alert('No trip summary available');
+  }
+}
+
 function goBack() { if (window.history.length > 1) window.history.back(); else alert('Use browser navigation to exit.'); }
 function skipSelection() { if (confirm('Skip seat selection?')) goBack(); }
 function confirmSeat() {
@@ -751,6 +779,12 @@ function init() {
   passengerKeys = (getQueryParam('passenger_keys') || '').split(',').filter(Boolean);
   customerNumber = getQueryParam('customer_number') || '';
   pnr = getQueryParam('pnr') || getQueryParam('record_locator') || '';
+  
+  // FIXED: Read trip_summary, total_amount, and currency from query params
+  tripSummary = getQueryParam('trip_summary') || '';
+  const amountStr = getQueryParam('total_amount');
+  totalAmount = amountStr ? parseFloat(amountStr) : 0;
+  currencyCode = getQueryParam('currency') || 'INR';
 
   if (apiBaseUrl && authToken) {
     loadAndRenderFromApi();
