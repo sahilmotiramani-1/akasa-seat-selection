@@ -728,15 +728,9 @@ function sendSeatSelectionToBot(payload) {
   const executeText = `{always execute function \`seat_selection\` ,data:${encoded}}`;
 
   if (window.parent && window.parent !== window) {
-    window.parent.postMessage(
-      `http://haptik-webview//perform-action?action=close&message=${text}&message_type=0`,
-      '*'
-    );
-    window.parent.postMessage(
-      `http://haptik-webview//perform-action?action=close&message=${executeText}&message_type=0`,
-      '*'
-    );
-  } else {
+    window.parent.postMessage(`http://haptik-webview//perform-action?action=close&message=${text}&message_type=0`, '*');
+    window.parent.postMessage(`http://haptik-webview//perform-action?action=close&message=${executeText}&message_type=0`, '*');
+  }else {
     console.log('Seat selection payload:', payload);
   }
 }
