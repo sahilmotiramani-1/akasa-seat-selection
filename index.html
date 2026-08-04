@@ -230,6 +230,7 @@ let pnr = '';
 let tripSummary = '';
 let totalAmount = 0;
 let currencyCode = 'INR';
+let segmentMap = [];
 
 function showLoading(v) { document.getElementById('loading').style.display = v ? 'block' : 'none'; }
 function showError(html) {
@@ -334,7 +335,8 @@ function renderSeatMapData(flightList) {
       data: fd,
       parsed: parseSeatMap(fd),
       label: buildFlightLabel(fd),
-      flightNum: buildFlightNum(fd)
+      flightNum: buildFlightNum(fd),
+      journeyKey: resolveJourneyKeyForFlight(fd, fi) 
     };
   });
 
@@ -344,6 +346,7 @@ function renderSeatMapData(flightList) {
 }
 
 function buildFlightLabel(data) {
+  
   // FIXED: Use tripSummary from query params if available
   if (tripSummary) return tripSummary;
   
@@ -355,6 +358,7 @@ function buildFlightLabel(data) {
     if (from && to) return `${from} - ${to}`;
   }
   if (root?.departureStation && root?.arrivalStation) return `${root.departureStation} - ${root.arrivalStation}`;
+  if (tripSummary) return tripSummary;
   return 'Flight';
 }
 
@@ -694,7 +698,7 @@ function hideTip() { tip.style.display = 'none'; }
 function buildSeatSelectionPayload() {
   const selectedItems = [];
   perFlightSeats.forEach((flightSeats, fi) => {
-    const journeyKey = journeyKeys[fi] || journeyKeys[0] || '';
+    const journeyKey = allParsedMaps[fi]?.journeyKey || journeyKeys[fi] || journeyKeys[0] || '';
     Object.entries(flightSeats || {}).forEach(([pid, seatInfo]) => {
       if (!seatInfo || !seatInfo.seat || !seatInfo.unitKey) return;
       const passengerKey = passengerKeys[Number(pid) - 1] || '';
@@ -769,6 +773,21 @@ document.getElementById('json-file-input').addEventListener('change', function()
     showError(`<strong>⚠ Could not load seat map</strong> ${err.message}`);
   });
 });
+function resolveJourneyKeyForFlight(fd, fi) {
+  const root = fd?.seatMap ?? fd;
+  const seg = (root?.segments ?? root?.legs ?? root?.journeys ?? [])[0] || {};
+  const from = (seg.departureStation || seg.origin || seg.from || '').toUpperCase();
+  const to = (seg.arrivalStation || seg.destination || seg.to || '').toUpperCase();
+
+  const match = segmentMap.find(m =>
+    (m.origin || '').toUpperCase() === from &&
+    (m.destination || '').toUpperCase() === to
+  );
+  if (match) return match.journeyKey;
+
+  // fallback for old data without segment_map
+  return journeyKeys[fi] || journeyKeys[0] || '';
+}
 
 function init() {
   apiBaseUrl = getQueryParam('base_url') || '';
@@ -779,6 +798,9 @@ function init() {
   passengerKeys = (getQueryParam('passenger_keys') || '').split(',').filter(Boolean);
   customerNumber = getQueryParam('customer_number') || '';
   pnr = getQueryParam('pnr') || getQueryParam('record_locator') || '';
+  try {
+    segmentMap = JSON.parse(getQueryParam('segment_map') || '[]');
+  } catch (e) { segmentMap = []; }
   
   // FIXED: Read trip_summary, total_amount, and currency from query params
   tripSummary = getQueryParam('trip_summary') || '';
