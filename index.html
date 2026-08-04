@@ -346,20 +346,19 @@ function renderSeatMapData(flightList) {
 }
 
 function buildFlightLabel(data) {
-  
-  // FIXED: Use tripSummary from query params if available
-  if (tripSummary) return tripSummary;
-  
-  const root = data?.seatMap ?? data;
-  const seg = (root?.segments ?? root?.legs ?? root?.journeys ?? [])[0];
-  if (seg) {
-    const from = seg.departureStation || seg.origin || seg.from;
-    const to = seg.arrivalStation || seg.destination || seg.to;
-    if (from && to) return `${from} - ${to}`;
-  }
-  if (root?.departureStation && root?.arrivalStation) return `${root.departureStation} - ${root.arrivalStation}`;
-  if (tripSummary) return tripSummary;
-  return 'Flight';
+    const root = data?.seatMap ?? data;
+    const seg = (root?.segments ?? root?.legs ?? [])[0];
+
+    if (seg) {
+        const from = seg.departureStation || seg.origin || seg.from;
+        const to = seg.arrivalStation || seg.destination || seg.to;
+
+        if (from && to) {
+            return `${from} → ${to}`;
+        }
+    }
+
+    return "Flight";
 }
 
 function buildFlightNum(data) {
