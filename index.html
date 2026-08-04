@@ -718,7 +718,6 @@ function sendSeatSelectionToBot(payload) {
     `journey_keys=${encodeURIComponent(journeyKeys.join(','))}`,
     `passenger_keys=${encodeURIComponent(passengerKeys.join(','))}`,
     `selected_seats=${encodeURIComponent(payload)}`,
-    `capture_seat_selection=${encodeURIComponent(payload)}`
   );
 
   const data = parts.join('||');
