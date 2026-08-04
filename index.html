@@ -327,18 +327,32 @@ function renderSeatMapData(flightList) {
   if (passengerNames.length === 0) {
     for (let i = 1; i <= numPax; i++) passengerNames.push(`Passenger ${i}`);
   }
+const tripLabels = tripSummary
+  ? tripSummary.split("|").map(s => s.trim())
+  : [];
 
-  allParsedMaps = flightList.map((fd, fi) => {
-    perFlightSeats[fi] = {};
-    for (let p = 1; p <= numPax; p++) perFlightSeats[fi][p] = { seat: null, fee: 0, detail: '', unitKey: null };
-    return {
-      data: fd,
-      parsed: parseSeatMap(fd),
-      label: buildFlightLabel(fd),
-      flightNum: buildFlightNum(fd),
-      journeyKey: resolveJourneyKeyForFlight(fd, fi) 
+allParsedMaps = flightList.map((fd, fi) => {
+  perFlightSeats[fi] = {};
+  for (let p = 1; p <= numPax; p++) {
+    perFlightSeats[fi][p] = {
+      seat: null,
+      fee: 0,
+      detail: '',
+      unitKey: null
     };
-  });
+  }
+
+  return {
+    data: fd,
+    parsed: parseSeatMap(fd),
+
+    // Use the corresponding route from trip_summary
+    label: tripLabels[fi] || `Flight ${fi + 1}`,
+
+    flightNum: buildFlightNum(fd),
+    journeyKey: resolveJourneyKeyForFlight(fd, fi)
+  };
+});
 
   buildFlightTabs();
   buildPaxCards();
