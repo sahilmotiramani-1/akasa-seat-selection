@@ -74,7 +74,13 @@
   /* ── SEATMAP ── */
   .main { background: #f0f0f0; min-height: calc(100vh - 210px); }
   .seatmap-area { width: 100%; overflow-x: auto; padding: 16px 18px 24px; display: flex; justify-content: flex-start; }
-  .aircraft-wrap { display: block; width: max-content; margin: 0 auto; }
+  .aircraft-wrap {
+    display: block;
+    width: max-content;
+    margin: 0 auto;
+    transform: scale(1.35);
+    transform-origin: top center;
+}
 
   #loading   { text-align: center; padding: 40px; color: #888; font-size: 14px; }
   #error-box { display: none; margin: 20px; padding: 20px; background: #fff8f2; border: 1.5px solid #e8630a; border-radius: 8px; font-size: 13px; line-height: 1.8; color: #333; }
