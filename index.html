@@ -7,6 +7,9 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; }
+  /* Hide Skip controls if injected by the host/webview */
+  button.skip, #skip, #skip-btn, .skip-btn, [data-action="skip"] { display: none !important; }
+
   /* ── FLIGHT SEGMENT TABS — very top, full width ── */
   .flight-tabs-bar {
     background: #fff8f2;
@@ -39,9 +42,6 @@
   .sector-info { display: flex; flex-direction: column; gap: 2px; }
   .sector-route { font-size: 16px; font-weight: 700; color: #1a1a2e; }
   .sector-pill  { background: #fff8f2; color: #c05000; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; margin-top: 2px; }
-  .btn-skip     { background: transparent; border: 1.5px solid #ccc; color: #555; padding: 7px 16px; border-radius: 999px; cursor: pointer; font-size: 13px; white-space: nowrap; }
-  .btn-skip:hover { background: #f9f9f9; }
-
   /* ── PAX BAR ── */
   .pax-bar {
     background: #fff; border-bottom: 1px solid #e5e7eb;
@@ -86,14 +86,40 @@
   #error-box { display: none; margin: 20px; padding: 20px; background: #fff8f2; border: 1.5px solid #e8630a; border-radius: 8px; font-size: 13px; line-height: 1.8; color: #333; }
   #error-box strong { color: #c00; font-size: 15px; display: block; margin-bottom: 8px; }
   #error-box code   { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
-  #file-picker-area { display: none; margin: 20px; padding: 20px; background: #f0f7ff; border: 1.5px dashed #4a90e2; border-radius: 8px; text-align: center; }
-  #file-picker-area p { font-size: 13px; color: #555; margin-bottom: 12px; }
-
-  .col-headers   { display: flex; align-items: center; gap: 3px; margin-bottom: 4px; padding-left: 28px; }
-  .col-hdr       { width: 38px; text-align: center; font-size: 11px; font-weight: 700; color: #666; }
-  .aisle-space   { width: 22px; flex-shrink: 0; }
-  .seat-row      { display: flex; align-items: center; gap: 3px; margin: 1.5px 0; }
-  .row-num       { width: 24px; text-align: right; font-size: 10px; color: #aaa; padding-right: 4px; flex-shrink: 0; }
+  /* ── SEATMAP ALIGNMENT: A B C | D E F ── */
+  .col-headers {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 4px;
+    padding-left: 27px;
+  }
+  .col-hdr {
+    width: 38px;
+    flex: 0 0 38px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #666;
+  }
+  .aisle-space {
+    width: 22px;
+    flex: 0 0 22px;
+  }
+  .seat-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin: 1.5px 0;
+  }
+  .row-num {
+    width: 24px;
+    flex: 0 0 24px;
+    text-align: right;
+    font-size: 10px;
+    color: #aaa;
+    padding-right: 4px;
+  }
   .seat {
     width: 38px; height: 32px; border-radius: 4px; border: 1.5px solid;
     font-size: 8.5px; font-weight: 600; display: flex; align-items: center;
@@ -108,7 +134,7 @@
   .s-empty  { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
   .s-blocked{ background: #f3f4f6; border-color: #ddd; color: #bbb; cursor: not-allowed; }
 
-  .exit-label-row { display: flex; align-items: center; gap: 3px; margin: 4px 0; padding-left: 28px; }
+  .exit-label-row { display: flex; align-items: center; gap: 3px; margin: 4px 0; padding-left: 27px; }
   .exit-lbl    { background: #e8630a; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 0; border-radius: 3px; text-align: center; letter-spacing: 0.5px; width: 38px; flex-shrink: 0; }
   .exit-spacer { width: 38px; flex-shrink: 0; }
   
@@ -153,7 +179,7 @@
     .aisle-space { width: 10px; }
     .row-num { width: 13px; font-size: 6px; }
     .seat-row { gap: 1.5px; margin: 0.5px 0; }
-    .col-headers { gap: 17px; padding-left: 18px; }
+    .col-headers { gap: 1.5px; padding-left: 14px; }
     .exit-label-row { padding-left: 14px; gap: 1.5px; }
   }
 </style>
@@ -169,7 +195,6 @@
     <div class="sector-route" id="sector-route">Loading...</div>
     <span class="sector-pill"  id="sector-flight">Flight details</span>
   </div>
-  <button class="btn-skip" onclick="skipSelection()">Skip</button>
 </div>
 
 <!-- ③ PAX BAR -->
@@ -193,10 +218,6 @@
   <div class="seatmap-area">
     <div id="loading">Loading seat map…</div>
     <div id="error-box"></div>
-    <div id="file-picker-area">
-      <p>Could not auto-load the JSON. Pick the file manually:</p>
-      <input type="file" id="json-file-input" accept=".json">
-    </div>
     <div class="aircraft-wrap" id="seatmap-root" style="display:none;"></div>
   </div>
 </div>
@@ -204,11 +225,10 @@
 <!-- ⑥ BOTTOM BAR -->
 <div class="bottom-bar">
   <div class="price-info">
-    <div class="price-total" id="price-display">₹5,805</div>
+    <div class="price-total" id="price-display">Loading...</div>
     <div class="price-link" onclick="toggleSummary()">View summary</div>
   </div>
   <div class="action-area">
-    <button class="btn-action btn-secondary" onclick="goBack()">Back</button>
     <button class="btn-action btn-primary"   id="confirm-btn" onclick="handleConfirm()">Confirm seat</button>
   </div>
 </div>
@@ -216,7 +236,7 @@
 <div class="seat-tooltip" id="tooltip"></div>
 
 <script>
-const BASE_PRICE = 5805;
+const BASE_PRICE = 0;
 
 let passengerNames = [];
 let numPax = 3;
@@ -242,11 +262,9 @@ function showLoading(v) { document.getElementById('loading').style.display = v ?
 function showError(html) {
   const b = document.getElementById('error-box');
   b.style.display = 'block'; b.innerHTML = html;
-  document.getElementById('file-picker-area').style.display = 'block';
 }
 function showMap() {
   document.getElementById('seatmap-root').style.display = 'block';
-  document.getElementById('file-picker-area').style.display = 'none';
 }
 function getQueryParam(name) {
   return new URLSearchParams(window.location.search).get(name) || '';
@@ -262,13 +280,6 @@ function buildSeatMapPayload(raw) {
   }
   return flightList;
 }
-function safeParseJSON(text) {
-  try { return JSON.parse(text); } catch (e) {}
-  const last = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
-  if (last > 0) { try { return JSON.parse(text.slice(0, last + 1)); } catch (e) {} }
-  throw new Error('JSON is malformed and could not be auto-repaired.');
-}
-
 async function fetchSeatMapFromApi() {
   const headers = {
     'Authorization': authToken,
@@ -316,7 +327,7 @@ async function loadAndRenderFromApi() {
   } catch (err) {
     showLoading(false);
     showError(`<strong>⚠ Could not load seat map</strong> ${err.message}<br><br>
-      <b>Common fixes:</b><br>• Verify the bot passed a valid auth token and API base URL<br>• Or use the file picker below`);
+      <b>Common fixes:</b><br>• Verify the bot passed a valid auth token and API base URL`);
   }
 }
 
@@ -481,8 +492,18 @@ function updateUIForFlight() {
   // FIXED: Use totalAmount from query params if available
   let totalFee = 0;
   perFlightSeats.forEach(fs => { Object.values(fs).forEach(p => { totalFee += p.fee; }); });
-  const finalPrice = totalAmount > 0 ? totalAmount + totalFee : BASE_PRICE + totalFee;
-  document.getElementById('price-display').textContent = currencyCode + ' ' + finalPrice.toLocaleString('en-IN');
+  const priceDisplay = document.getElementById('price-display');
+
+  if (totalAmount > 0) {
+    const finalPrice = totalAmount + totalFee;
+    priceDisplay.textContent = currencyCode + ' ' + finalPrice.toLocaleString('en-IN');
+  } else if (totalFee > 0) {
+    // If only seat fees are available, show those instead of inventing a booking total.
+    priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
+  } else {
+    // No booking total available yet.
+    priceDisplay.textContent = 'Loading...';
+  }
 }
 
 function updateConfirmButton() {
@@ -571,19 +592,33 @@ function extractPassengerNames(data) {
 function renderSeatMap({ rowMap, sortedRows }) {
   const root = document.getElementById('seatmap-root');
   root.innerHTML = '';
-  const colSet = new Set();
-  sortedRows.forEach(r => Object.keys(rowMap[r]).forEach(c => colSet.add(c)));
-  const allCols = [...colSet].sort();
-  const midIdx = Math.ceil(allCols.length / 2);
-  const LEFT = allCols.slice(0, midIdx), RIGHT = allCols.slice(midIdx);
+  // Akasa 737 MAX seat layout: A B C | D E F.
+  // Keep the columns fixed so the headers and every row stay perfectly aligned,
+  // even when a particular row has a missing/blocked seat.
+  const LEFT = ['A', 'B', 'C'];
+  const RIGHT = ['D', 'E', 'F'];
 
-  const hdr = document.createElement('div'); hdr.className = 'col-headers';
-  [...LEFT, null, ...RIGHT].forEach(c => {
+  const hdr = document.createElement('div');
+  hdr.className = 'col-headers';
+
+  LEFT.forEach(c => {
     const d = document.createElement('div');
-    d.className = c === null ? 'aisle-space' : 'col-hdr';
-    if (c) d.textContent = c;
+    d.className = 'col-hdr';
+    d.textContent = c;
     hdr.appendChild(d);
   });
+
+  const headerAisle = document.createElement('div');
+  headerAisle.className = 'aisle-space';
+  hdr.appendChild(headerAisle);
+
+  RIGHT.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'col-hdr';
+    d.textContent = c;
+    hdr.appendChild(d);
+  });
+
   root.appendChild(hdr);
 
   let prevExit = false;
@@ -761,8 +796,6 @@ function toggleSummary() {
   }
 }
 
-function goBack() { if (window.history.length > 1) window.history.back(); else alert('Use browser navigation to exit.'); }
-function skipSelection() { if (confirm('Skip seat selection?')) goBack(); }
 function confirmSeat() {
   const payload = buildSeatSelectionPayload();
   if (!payload) { alert('Please select seats for passengers.'); return; }
@@ -774,17 +807,6 @@ function confirmSeat() {
   setTimeout(() => sendSeatSelectionToBot(payload), 500);
 }
 
-document.getElementById('json-file-input').addEventListener('change', function() {
-  const file = this.files[0]; if (!file) return;
-  document.getElementById('error-box').style.display = 'none';
-  document.getElementById('file-picker-area').style.display = 'none';
-  file.text().then(text => {
-    const raw = safeParseJSON(text);
-    renderSeatMapData(buildSeatMapPayload(raw));
-  }).catch(err => {
-    showError(`<strong>⚠ Could not load seat map</strong> ${err.message}`);
-  });
-});
 function resolveJourneyKeyForFlight(fd, fi) {
   const root = fd?.seatMap ?? fd;
   const seg = (root?.segments ?? root?.legs ?? root?.journeys ?? [])[0] || {};
