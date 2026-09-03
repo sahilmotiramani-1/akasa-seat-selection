@@ -7,9 +7,6 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; }
-  /* Hide Skip controls if injected by the host/webview */
-  button.skip, #skip, #skip-btn, .skip-btn, [data-action="skip"] { display: none !important; }
-
   /* ── FLIGHT SEGMENT TABS — very top, full width ── */
   .flight-tabs-bar {
     background: #fff8f2;
@@ -86,17 +83,20 @@
   #error-box { display: none; margin: 20px; padding: 20px; background: #fff8f2; border: 1.5px solid #e8630a; border-radius: 8px; font-size: 13px; line-height: 1.8; color: #333; }
   #error-box strong { color: #c00; font-size: 15px; display: block; margin-bottom: 8px; }
   #error-box code   { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
-  /* ── SEATMAP ALIGNMENT: A B C | D E F ── */
-  .col-headers {
-    display: flex;
+  .seat-grid {
+    display: grid;
+    grid-template-columns: 38px 24px 38px 38px 38px 22px 38px 38px 38px 38px;
+    column-gap: 3px;
     align-items: center;
-    gap: 3px;
+  }
+  .seat-grid-header {
     margin-bottom: 4px;
-    padding-left: 27px;
+  }
+  .seat-grid-row {
+    margin: 1.5px 0;
   }
   .col-hdr {
     width: 38px;
-    flex: 0 0 38px;
     text-align: center;
     font-size: 11px;
     font-weight: 700;
@@ -104,17 +104,9 @@
   }
   .aisle-space {
     width: 22px;
-    flex: 0 0 22px;
-  }
-  .seat-row {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    margin: 1.5px 0;
   }
   .row-num {
     width: 24px;
-    flex: 0 0 24px;
     text-align: right;
     font-size: 10px;
     color: #aaa;
@@ -134,9 +126,24 @@
   .s-empty  { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
   .s-blocked{ background: #f3f4f6; border-color: #ddd; color: #bbb; cursor: not-allowed; }
 
-  .exit-label-row { display: flex; align-items: center; gap: 3px; margin: 4px 0; padding-left: 27px; }
-  .exit-lbl    { background: #e8630a; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 0; border-radius: 3px; text-align: center; letter-spacing: 0.5px; width: 38px; flex-shrink: 0; }
-  .exit-spacer { width: 38px; flex-shrink: 0; }
+ .exit-side {
+  width: 38px;
+  height: 32px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8630a;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.exit-side.empty {
+  visibility: hidden;
+}
   
   /* ── BOTTOM BAR ── */
   .bottom-bar {
@@ -166,21 +173,33 @@
   
   @media (max-width: 768px) {
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
-    .col-hdr, .exit-lbl, .exit-spacer { width: 28px; font-size: 7px; }
+    .col-hdr {
+  width: 28px;
+  font-size: 7px;
+}
+
+.exit-side {
+  width: 28px;
+  height: 24px;
+  font-size: 7px;
+}
     .aisle-space { width: 14px; }
-    .col-headers, .exit-label-row { padding-left: 20px; }
+    
     .row-num { width: 18px; font-size: 8px; }
     .bottom-bar { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
     .btn-action { padding: 8px 14px; font-size: 12px; }
   }
   @media (max-width: 480px) {
     .seat { width: 23px; height: 20px; font-size: 5px; }
-    .col-hdr, .exit-lbl, .exit-spacer { width: 23px; }
     .aisle-space { width: 10px; }
     .row-num { width: 13px; font-size: 6px; }
-    .seat-row { gap: 1.5px; margin: 0.5px 0; }
-    .col-headers { gap: 1.5px; padding-left: 14px; }
-    .exit-label-row { padding-left: 14px; gap: 1.5px; }
+    .seat-grid-row { margin: 0.5px 0; }
+    .col-hdr { width: 23px; }
+    .exit-side { width: 23px; height: 20px; font-size: 6px; }
+    .seat-grid {
+      grid-template-columns: 23px 13px 23px 23px 23px 10px 23px 23px 23px 23px;
+      column-gap: 1.5px;
+    }
   }
 </style>
 </head>
@@ -331,49 +350,105 @@ async function loadAndRenderFromApi() {
   }
 }
 
+
 function renderSeatMapData(flightList) {
-  // FIXED: Properly extract passenger names from query params if provided
-  const queryPassengerNames = getQueryParam('passenger_names');
-  if (queryPassengerNames) {
-    passengerNames = queryPassengerNames.split(',').map(name => name.trim()).filter(Boolean);
-  } else {
-    passengerNames = extractPassengerNames(flightList[0] || {});
+  if (!Array.isArray(flightList) || flightList.length === 0) {
+    throw new Error('No seat map data found.');
   }
-  
-  numPax = passengerNames.length || 3;
-  if (passengerNames.length === 0) {
-    for (let i = 1; i <= numPax; i++) passengerNames.push(`Passenger ${i}`);
-  }
-const tripLabels = tripSummary
-  ? tripSummary.split("|").map(s => s.trim())
-  : [];
 
-allParsedMaps = flightList.map((fd, fi) => {
-  perFlightSeats[fi] = {};
-  for (let p = 1; p <= numPax; p++) {
-    perFlightSeats[fi][p] = {
-      seat: null,
-      fee: 0,
-      detail: '',
-      unitKey: null
+  allParsedMaps = flightList.map((data, i) => {
+    const parsed = parseSeatMap(data);
+    return {
+      parsed,
+      label: buildFlightLabel(data),
+      flightNum: buildFlightNum(data),
+      journeyKey: resolveJourneyKeyForFlight(data, i)
     };
-  }
+  });
 
-  return {
-    data: fd,
-    parsed: parseSeatMap(fd),
+  // Keep passenger count in sync with the passenger keys supplied by the bot.
+  if (passengerKeys.length > 0) numPax = passengerKeys.length;
 
-    // Use the corresponding route from trip_summary
-    label: tripLabels[fi] || `Flight ${fi + 1}`,
+  // Initialise one seat state object per flight.
+  perFlightSeats = allParsedMaps.map(() => {
+    const seats = {};
+    for (let i = 1; i <= numPax; i++) {
+      seats[i] = { seat: null, fee: 0, detail: '', unitKey: null };
+    }
+    return seats;
+  });
 
-    flightNum: buildFlightNum(fd),
-    journeyKey: resolveJourneyKeyForFlight(fd, fi)
-  };
-});
-
-  buildFlightTabs();
   buildPaxCards();
+  buildFlightTabs();
   switchToFlight(0);
+}
+
+function renderSeatMap({ rowMap, sortedRows }) {
+  const root = document.getElementById('seatmap-root');
+  root.innerHTML = '';
+
+  // Fixed Akasa layout: Exit | row | A B C | aisle | D E F | Exit
+  const LEFT = ['A', 'B', 'C'];
+  const RIGHT = ['D', 'E', 'F'];
+
+  const header = document.createElement('div');
+  header.className = 'seat-grid seat-grid-header';
+
+  const headerCells = [
+    ['exit-side empty', ''],
+    ['row-num', ''],
+    ['col-hdr', 'A'],
+    ['col-hdr', 'B'],
+    ['col-hdr', 'C'],
+    ['aisle-space', ''],
+    ['col-hdr', 'D'],
+    ['col-hdr', 'E'],
+    ['col-hdr', 'F'],
+    ['exit-side empty', '']
+  ];
+
+  headerCells.forEach(([cls, value]) => {
+    const cell = document.createElement('div');
+    cell.className = cls;
+    cell.textContent = value;
+    header.appendChild(cell);
+  });
+
+  root.appendChild(header);
+
+  sortedRows.forEach(rowNum => {
+    const rowData = rowMap[rowNum] || {};
+    const isExitRow = Object.values(rowData).some(seat => seat && seat.isExit);
+
+    const row = document.createElement('div');
+    row.className = 'seat-grid seat-grid-row';
+
+    // Exactly ONE Exit element per side for the whole row.
+    const leftExit = document.createElement('div');
+    leftExit.className = 'exit-side' + (isExitRow ? '' : ' empty');
+    leftExit.textContent = isExitRow ? 'Exit' : '';
+    row.appendChild(leftExit);
+
+    const rowNumber = document.createElement('div');
+    rowNumber.className = 'row-num';
+    rowNumber.textContent = rowNum;
+    row.appendChild(rowNumber);
+
+    LEFT.forEach(col => row.appendChild(buildSeat(rowData[col], rowNum, col)));
+
+    const aisle = document.createElement('div');
+    aisle.className = 'aisle-space';
+    row.appendChild(aisle);
+
+    RIGHT.forEach(col => row.appendChild(buildSeat(rowData[col], rowNum, col)));
+
+    const rightExit = document.createElement('div');
+    rightExit.className = 'exit-side' + (isExitRow ? '' : ' empty');
+    rightExit.textContent = isExitRow ? 'Exit' : '';
+    row.appendChild(rightExit);
+
+    root.appendChild(row);
+  });
 }
 
 function buildFlightLabel(data) {
@@ -587,73 +662,6 @@ function extractPassengerNames(data) {
   const list = data?.passengers ?? data?.passengerList ?? data?.passengerDetails ?? data?.passenger ?? [];
   if (!Array.isArray(list)) return [];
   return list.map(item => item?.name || [item?.firstName, item?.lastName].filter(Boolean).join(' ')).filter(Boolean);
-}
-
-function renderSeatMap({ rowMap, sortedRows }) {
-  const root = document.getElementById('seatmap-root');
-  root.innerHTML = '';
-  // Akasa 737 MAX seat layout: A B C | D E F.
-  // Keep the columns fixed so the headers and every row stay perfectly aligned,
-  // even when a particular row has a missing/blocked seat.
-  const LEFT = ['A', 'B', 'C'];
-  const RIGHT = ['D', 'E', 'F'];
-
-  const hdr = document.createElement('div');
-  hdr.className = 'col-headers';
-
-  LEFT.forEach(c => {
-    const d = document.createElement('div');
-    d.className = 'col-hdr';
-    d.textContent = c;
-    hdr.appendChild(d);
-  });
-
-  const headerAisle = document.createElement('div');
-  headerAisle.className = 'aisle-space';
-  hdr.appendChild(headerAisle);
-
-  RIGHT.forEach(c => {
-    const d = document.createElement('div');
-    d.className = 'col-hdr';
-    d.textContent = c;
-    hdr.appendChild(d);
-  });
-
-  root.appendChild(hdr);
-
-  let prevExit = false;
-  sortedRows.forEach((rowNum, idx) => {
-    const rowData = rowMap[rowNum] ?? {};
-    const isExit = Object.keys(rowData).some(c => rowData[c]?.isExit);
-    if (isExit && !prevExit) root.appendChild(buildExitLabelRow(rowData, LEFT, RIGHT));
-
-    const rowDiv = document.createElement('div'); rowDiv.className = 'seat-row';
-    const numDiv = document.createElement('div'); numDiv.className = 'row-num'; numDiv.textContent = rowNum;
-    rowDiv.appendChild(numDiv);
-    LEFT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
-    const aisle = document.createElement('div'); aisle.className = 'aisle-space'; rowDiv.appendChild(aisle);
-    RIGHT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
-    root.appendChild(rowDiv);
-
-    const nextRow = sortedRows[idx + 1];
-    const nextIsExit = nextRow ? Object.keys(rowMap[nextRow] ?? {}).some(c => rowMap[nextRow][c]?.isExit) : false;
-    if (isExit && !nextIsExit) root.appendChild(buildExitLabelRow(rowData, LEFT, RIGHT));
-    prevExit = isExit;
-  });
-}
-
-function buildExitLabelRow(rowData, LEFT, RIGHT) {
-  const wrap = document.createElement('div'); wrap.className = 'exit-label-row';
-  const mk = col => {
-    const d = document.createElement('div');
-    if (rowData[col]?.isExit) { d.className = 'exit-lbl'; d.textContent = 'Exit'; }
-    else d.className = 'exit-spacer';
-    return d;
-  };
-  LEFT.forEach(c => wrap.appendChild(mk(c)));
-  const a = document.createElement('div'); a.className = 'aisle-space'; wrap.appendChild(a);
-  RIGHT.forEach(c => wrap.appendChild(mk(c)));
-  return wrap;
 }
 
 function buildSeat(info, rowNum, col) {
