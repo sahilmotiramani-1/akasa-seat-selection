@@ -134,9 +134,31 @@
   .s-empty  { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
   .s-blocked{ background: #f3f4f6; border-color: #ddd; color: #bbb; cursor: not-allowed; }
 
-  .exit-label-row { display: flex; align-items: center; gap: 3px; margin: 4px 0; padding-left: 27px; }
-  .exit-lbl    { background: #e8630a; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 0; border-radius: 3px; text-align: center; letter-spacing: 0.5px; width: 38px; flex-shrink: 0; }
-  .exit-spacer { width: 38px; flex-shrink: 0; }
+  .exit-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 3px;
+    margin: 4px 0;
+    padding: 0;
+    width: 100%;
+  }
+  .exit-lbl {
+    background: #e8630a;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 7px;
+    border-radius: 3px;
+    text-align: center;
+    letter-spacing: 0.5px;
+    width: 38px;
+    flex-shrink: 0;
+  }
+  .exit-middle {
+    flex: 1;
+    min-width: 0;
+  }
   
   /* ── BOTTOM BAR ── */
   .bottom-bar {
@@ -166,7 +188,7 @@
   
   @media (max-width: 768px) {
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
-    .col-hdr, .exit-lbl, .exit-spacer { width: 28px; font-size: 7px; }
+    .col-hdr, .exit-lbl { width: 28px; font-size: 7px; }
     .aisle-space { width: 14px; }
     .col-headers, .exit-label-row { padding-left: 20px; }
     .row-num { width: 18px; font-size: 8px; }
@@ -175,12 +197,12 @@
   }
   @media (max-width: 480px) {
     .seat { width: 23px; height: 20px; font-size: 5px; }
-    .col-hdr, .exit-lbl, .exit-spacer { width: 23px; }
+    .col-hdr, .exit-lbl { width: 23px; }
     .aisle-space { width: 10px; }
     .row-num { width: 13px; font-size: 6px; }
     .seat-row { gap: 1.5px; margin: 0.5px 0; }
     .col-headers { gap: 1.5px; padding-left: 14px; }
-    .exit-label-row { padding-left: 14px; gap: 1.5px; }
+    .exit-label-row { padding: 0; gap: 1.5px; }
   }
 </style>
 </head>
@@ -225,8 +247,8 @@
 <!-- ⑥ BOTTOM BAR -->
 <div class="bottom-bar">
   <div class="price-info">
-    <div class="price-total" id="price-display">Loading...</div>
-    <div class="price-link" onclick="toggleSummary()">View summary</div>
+    <div class="price-total" id="price-display">₹0</div>
+    <div class="price-link" id="summary-link" style="display:none;">View summary</div>
   </div>
   <div class="action-area">
     <button class="btn-action btn-primary"   id="confirm-btn" onclick="handleConfirm()">Confirm seat</button>
@@ -489,21 +511,21 @@ function updateUIForFlight() {
     }
   }
 
-  // FIXED: Use totalAmount from query params if available
+  // Seat-selection price only: start from 0 and update with selected seat fees.
+  // The original flight/booking total is intentionally ignored.
   let totalFee = 0;
-  perFlightSeats.forEach(fs => { Object.values(fs).forEach(p => { totalFee += p.fee; }); });
-  const priceDisplay = document.getElementById('price-display');
+  perFlightSeats.forEach(fs => {
+    Object.values(fs).forEach(p => {
+      totalFee += Number(p?.fee) || 0;
+    });
+  });
 
-  if (totalAmount > 0) {
-    const finalPrice = totalAmount + totalFee;
-    priceDisplay.textContent = currencyCode + ' ' + finalPrice.toLocaleString('en-IN');
-  } else if (totalFee > 0) {
-    // If only seat fees are available, show those instead of inventing a booking total.
-    priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
-  } else {
-    // No booking total available yet.
-    priceDisplay.textContent = 'Loading...';
-  }
+  const priceDisplay = document.getElementById('price-display');
+  priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
+
+  // Summary is intentionally hidden.
+  const summaryLink = document.getElementById('summary-link');
+  if (summaryLink) summaryLink.style.display = 'none';
 }
 
 function updateConfirmButton() {
@@ -643,16 +665,25 @@ function renderSeatMap({ rowMap, sortedRows }) {
 }
 
 function buildExitLabelRow(rowData, LEFT, RIGHT) {
-  const wrap = document.createElement('div'); wrap.className = 'exit-label-row';
-  const mk = col => {
-    const d = document.createElement('div');
-    if (rowData[col]?.isExit) { d.className = 'exit-lbl'; d.textContent = 'Exit'; }
-    else d.className = 'exit-spacer';
-    return d;
-  };
-  LEFT.forEach(c => wrap.appendChild(mk(c)));
-  const a = document.createElement('div'); a.className = 'aisle-space'; wrap.appendChild(a);
-  RIGHT.forEach(c => wrap.appendChild(mk(c)));
+  const wrap = document.createElement('div');
+  wrap.className = 'exit-label-row';
+
+  // Exit markers sit outside the seat sheet: one on the far left and one on the far right.
+  const leftExit = document.createElement('div');
+  leftExit.className = 'exit-lbl';
+  leftExit.textContent = 'Exit';
+
+  const middle = document.createElement('div');
+  middle.className = 'exit-middle';
+
+  const rightExit = document.createElement('div');
+  rightExit.className = 'exit-lbl';
+  rightExit.textContent = 'Exit';
+
+  wrap.appendChild(leftExit);
+  wrap.appendChild(middle);
+  wrap.appendChild(rightExit);
+
   return wrap;
 }
 
@@ -839,7 +870,7 @@ function init() {
   // FIXED: Read trip_summary, total_amount, and currency from query params
   tripSummary = getQueryParam('trip_summary') || '';
   const amountStr = getQueryParam('total_amount');
-  totalAmount = amountStr ? parseFloat(amountStr) : 0;
+  // Seat selection price starts at 0. Do not include the original booking/flight amount.\n  totalAmount = 0;
   currencyCode = getQueryParam('currency') || 'INR';
 
   if (apiBaseUrl && authToken) {
