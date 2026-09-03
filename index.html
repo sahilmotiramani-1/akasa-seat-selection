@@ -86,50 +86,46 @@
   #error-box { display: none; margin: 20px; padding: 20px; background: #fff8f2; border: 1.5px solid #e8630a; border-radius: 8px; font-size: 13px; line-height: 1.8; color: #333; }
   #error-box strong { color: #c00; font-size: 15px; display: block; margin-bottom: 8px; }
   #error-box code   { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
-  /* ── SEATMAP ALIGNMENT: EXIT | ROW | A B C | AISLE | D E F | EXIT ── */
-  .col-headers,
-  .seat-row {
-    display: grid;
-    grid-template-columns: 38px 24px 38px 38px 38px 12px 38px 38px 38px 38px;
-    gap: 3px;
-    align-items: center;
-  }
-
+  /* ── SEATMAP ALIGNMENT: A B C | D E F ── */
   .col-headers {
+    display: flex;
+    align-items: center;
+    gap: 3px;
     margin-bottom: 4px;
+    padding-left: 27px;
   }
-
   .col-hdr {
     width: 38px;
+    flex: 0 0 38px;
     text-align: center;
     font-size: 11px;
     font-weight: 700;
     color: #666;
   }
-
   .aisle-space {
     width: 22px;
+    flex: 0 0 22px;
   }
-
   .seat-row {
+    display: flex;
+    align-items: center;
+    gap: 3px;
     margin: 1.5px 0;
   }
-
   .row-num {
     width: 24px;
+    flex: 0 0 24px;
     text-align: right;
     font-size: 10px;
     color: #aaa;
     padding-right: 4px;
   }
-
   .seat {
     width: 38px; height: 32px; border-radius: 4px; border: 1.5px solid;
     font-size: 8.5px; font-weight: 600; display: flex; align-items: center;
     justify-content: center; cursor: pointer; text-align: center; line-height: 1.2;
-    transition: transform 0.1s, box-shadow 0.1s; user-select: none;
+    transition: transform 0.1s, box-shadow 0.1s; user-select: none; flex-shrink: 0;
   }
-
   .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.18); z-index: 2; position: relative; }
   .s-std    { background: #fff;    border-color: #ccc;    color: #666; }
   .s-leg    { background: #fff8e1; border-color: #e8630a; color: #b84000; }
@@ -138,24 +134,10 @@
   .s-empty  { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
   .s-blocked{ background: #f3f4f6; border-color: #ddd; color: #bbb; cursor: not-allowed; }
 
-  .exit-side {
-    width: 38px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #e8630a;
-    color: #fff;
-    font-size: 9px;
-    font-weight: 800;
-    border-radius: 3px;
-    letter-spacing: 0.5px;
-  }
-
-  .exit-side.empty {
-    visibility: hidden;
-  }
-
+  .exit-label-row { display: flex; align-items: center; gap: 3px; margin: 4px 0; padding-left: 27px; }
+  .exit-lbl    { background: #e8630a; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 0; border-radius: 3px; text-align: center; letter-spacing: 0.5px; width: 38px; flex-shrink: 0; }
+  .exit-spacer { width: 38px; flex-shrink: 0; }
+  
   /* ── BOTTOM BAR ── */
   .bottom-bar {
     background: #fff; border-top: 2px solid #e5e7eb;
@@ -184,26 +166,21 @@
   
   @media (max-width: 768px) {
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
-    .col-headers, .seat-row {
-      grid-template-columns: 28px 18px 28px 28px 28px 8px 28px 28px 28px 28px;
-      gap: 3px;
-    }
-    .col-hdr, .exit-side { width: 28px; font-size: 7px; }
-    .aisle-space { width: 8px; }
+    .col-hdr, .exit-lbl, .exit-spacer { width: 28px; font-size: 7px; }
+    .aisle-space { width: 14px; }
+    .col-headers, .exit-label-row { padding-left: 20px; }
     .row-num { width: 18px; font-size: 8px; }
     .bottom-bar { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
     .btn-action { padding: 8px 14px; font-size: 12px; }
   }
   @media (max-width: 480px) {
     .seat { width: 23px; height: 20px; font-size: 5px; }
-    .col-headers, .seat-row {
-      grid-template-columns: 23px 13px 23px 23px 23px 6px 23px 23px 23px 23px;
-      gap: 1.5px;
-    }
-    .col-hdr, .exit-side { width: 23px; font-size: 6px; }
-    .aisle-space { width: 6px; }
+    .col-hdr, .exit-lbl, .exit-spacer { width: 23px; }
+    .aisle-space { width: 10px; }
     .row-num { width: 13px; font-size: 6px; }
-    .seat-row { margin: 0.5px 0; }
+    .seat-row { gap: 1.5px; margin: 0.5px 0; }
+    .col-headers { gap: 1.5px; padding-left: 14px; }
+    .exit-label-row { padding-left: 14px; gap: 1.5px; }
   }
 </style>
 </head>
@@ -248,7 +225,7 @@
 <!-- ⑥ BOTTOM BAR -->
 <div class="bottom-bar">
   <div class="price-info">
-    <div class="price-total" id="price-display">INR 0</div>
+    <div class="price-total" id="price-display">Loading...</div>
     <div class="price-link" onclick="toggleSummary()">View summary</div>
   </div>
   <div class="action-area">
@@ -386,11 +363,8 @@ allParsedMaps = flightList.map((fd, fi) => {
     data: fd,
     parsed: parseSeatMap(fd),
 
-    // Show the actual flight route/name in the tab.
-    // trip_summary is used only if the API does not provide a route.
-    label: buildFlightLabel(fd) !== 'Flight'
-      ? buildFlightLabel(fd)
-      : (tripLabels[fi] || `Flight ${fi + 1}`),
+    // Use the corresponding route from trip_summary
+    label: tripLabels[fi] || `Flight ${fi + 1}`,
 
     flightNum: buildFlightNum(fd),
     journeyKey: resolveJourneyKeyForFlight(fd, fi)
@@ -515,14 +489,21 @@ function updateUIForFlight() {
     }
   }
 
-  // Seat selection price only. Flight/booking amount is intentionally ignored.
+  // FIXED: Use totalAmount from query params if available
   let totalFee = 0;
-  perFlightSeats.forEach(fs => {
-    Object.values(fs).forEach(p => { totalFee += Number(p.fee) || 0; });
-  });
-
+  perFlightSeats.forEach(fs => { Object.values(fs).forEach(p => { totalFee += p.fee; }); });
   const priceDisplay = document.getElementById('price-display');
-  priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
+
+  if (totalAmount > 0) {
+    const finalPrice = totalAmount + totalFee;
+    priceDisplay.textContent = currencyCode + ' ' + finalPrice.toLocaleString('en-IN');
+  } else if (totalFee > 0) {
+    // If only seat fees are available, show those instead of inventing a booking total.
+    priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
+  } else {
+    // No booking total available yet.
+    priceDisplay.textContent = 'Loading...';
+  }
 }
 
 function updateConfirmButton() {
@@ -611,19 +592,14 @@ function extractPassengerNames(data) {
 function renderSeatMap({ rowMap, sortedRows }) {
   const root = document.getElementById('seatmap-root');
   root.innerHTML = '';
-
-  // Fixed layout: Exit | Row | A B C | aisle | D E F | Exit
+  // Akasa 737 MAX seat layout: A B C | D E F.
+  // Keep the columns fixed so the headers and every row stay perfectly aligned,
+  // even when a particular row has a missing/blocked seat.
   const LEFT = ['A', 'B', 'C'];
   const RIGHT = ['D', 'E', 'F'];
 
   const hdr = document.createElement('div');
   hdr.className = 'col-headers';
-
-  ['',''].forEach(() => {
-    const d = document.createElement('div');
-    d.className = 'exit-side empty';
-    hdr.appendChild(d);
-  });
 
   LEFT.forEach(c => {
     const d = document.createElement('div');
@@ -643,42 +619,41 @@ function renderSeatMap({ rowMap, sortedRows }) {
     hdr.appendChild(d);
   });
 
-  const rightHdr = document.createElement('div');
-  rightHdr.className = 'exit-side empty';
-  hdr.appendChild(rightHdr);
   root.appendChild(hdr);
 
-  sortedRows.forEach(rowNum => {
+  let prevExit = false;
+  sortedRows.forEach((rowNum, idx) => {
     const rowData = rowMap[rowNum] ?? {};
-    const isExit = Object.values(rowData).some(seat => seat?.isExit);
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'seat-row';
+    const isExit = Object.keys(rowData).some(c => rowData[c]?.isExit);
+    if (isExit && !prevExit) root.appendChild(buildExitLabelRow(rowData, LEFT, RIGHT));
 
-    const leftExit = document.createElement('div');
-    leftExit.className = `exit-side ${isExit ? '' : 'empty'}`;
-    leftExit.textContent = isExit ? 'Exit' : '';
-    rowDiv.appendChild(leftExit);
-
-    const numDiv = document.createElement('div');
-    numDiv.className = 'row-num';
-    numDiv.textContent = rowNum;
+    const rowDiv = document.createElement('div'); rowDiv.className = 'seat-row';
+    const numDiv = document.createElement('div'); numDiv.className = 'row-num'; numDiv.textContent = rowNum;
     rowDiv.appendChild(numDiv);
-
     LEFT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
-
-    const aisle = document.createElement('div');
-    aisle.className = 'aisle-space';
-    rowDiv.appendChild(aisle);
-
+    const aisle = document.createElement('div'); aisle.className = 'aisle-space'; rowDiv.appendChild(aisle);
     RIGHT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
-
-    const rightExit = document.createElement('div');
-    rightExit.className = `exit-side ${isExit ? '' : 'empty'}`;
-    rightExit.textContent = isExit ? 'Exit' : '';
-    rowDiv.appendChild(rightExit);
-
     root.appendChild(rowDiv);
+
+    const nextRow = sortedRows[idx + 1];
+    const nextIsExit = nextRow ? Object.keys(rowMap[nextRow] ?? {}).some(c => rowMap[nextRow][c]?.isExit) : false;
+    if (isExit && !nextIsExit) root.appendChild(buildExitLabelRow(rowData, LEFT, RIGHT));
+    prevExit = isExit;
   });
+}
+
+function buildExitLabelRow(rowData, LEFT, RIGHT) {
+  const wrap = document.createElement('div'); wrap.className = 'exit-label-row';
+  const mk = col => {
+    const d = document.createElement('div');
+    if (rowData[col]?.isExit) { d.className = 'exit-lbl'; d.textContent = 'Exit'; }
+    else d.className = 'exit-spacer';
+    return d;
+  };
+  LEFT.forEach(c => wrap.appendChild(mk(c)));
+  const a = document.createElement('div'); a.className = 'aisle-space'; wrap.appendChild(a);
+  RIGHT.forEach(c => wrap.appendChild(mk(c)));
+  return wrap;
 }
 
 function buildSeat(info, rowNum, col) {
@@ -813,20 +788,12 @@ function sendSeatSelectionToBot(payload) {
   }
 }
 
-function getSelectedSeatTotal() {
-  let total = 0;
-  perFlightSeats.forEach(fs => {
-    Object.values(fs || {}).forEach(p => { total += Number(p?.fee) || 0; });
-  });
-  return total;
-}
-
 function toggleSummary() {
-  let seatTotal = 0;
-  perFlightSeats.forEach(fs => {
-    Object.values(fs).forEach(p => { seatTotal += Number(p?.fee) || 0; });
-  });
-  alert(`Seat Summary:\nSeat charges: ${currencyCode} ${seatTotal.toLocaleString('en-IN')}\n\nFlight price: ${currencyCode} 0`);
+  if (tripSummary) {
+    alert(`Trip Summary:\n${tripSummary}\n\nTotal: ${currencyCode} ${totalAmount.toLocaleString('en-IN')}`);
+  } else {
+    alert('No trip summary available');
+  }
 }
 
 function confirmSeat() {
@@ -869,10 +836,10 @@ function init() {
     segmentMap = JSON.parse(getQueryParam('segment_map') || '[]');
   } catch (e) { segmentMap = []; }
   
-  // Flight/booking summary amount is intentionally zero.
-  // Only selected seat fees are displayed in the UI.
-  tripSummary = '';
-  totalAmount = 0;
+  // FIXED: Read trip_summary, total_amount, and currency from query params
+  tripSummary = getQueryParam('trip_summary') || '';
+  const amountStr = getQueryParam('total_amount');
+  totalAmount = amountStr ? parseFloat(amountStr) : 0;
   currencyCode = getQueryParam('currency') || 'INR';
 
   if (apiBaseUrl && authToken) {
