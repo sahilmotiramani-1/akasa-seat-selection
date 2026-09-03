@@ -90,7 +90,7 @@
   .col-headers,
   .seat-row {
     display: grid;
-    grid-template-columns: 38px 24px 38px 38px 38px 22px 38px 38px 38px 38px;
+    grid-template-columns: 38px 24px 38px 38px 38px 12px 38px 38px 38px 38px;
     gap: 3px;
     align-items: center;
   }
@@ -185,11 +185,11 @@
   @media (max-width: 768px) {
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
     .col-headers, .seat-row {
-      grid-template-columns: 28px 18px 28px 28px 28px 14px 28px 28px 28px 28px;
+      grid-template-columns: 28px 18px 28px 28px 28px 8px 28px 28px 28px 28px;
       gap: 3px;
     }
     .col-hdr, .exit-side { width: 28px; font-size: 7px; }
-    .aisle-space { width: 14px; }
+    .aisle-space { width: 8px; }
     .row-num { width: 18px; font-size: 8px; }
     .bottom-bar { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
     .btn-action { padding: 8px 14px; font-size: 12px; }
@@ -197,11 +197,11 @@
   @media (max-width: 480px) {
     .seat { width: 23px; height: 20px; font-size: 5px; }
     .col-headers, .seat-row {
-      grid-template-columns: 23px 13px 23px 23px 23px 10px 23px 23px 23px 23px;
+      grid-template-columns: 23px 13px 23px 23px 23px 6px 23px 23px 23px 23px;
       gap: 1.5px;
     }
     .col-hdr, .exit-side { width: 23px; font-size: 6px; }
-    .aisle-space { width: 10px; }
+    .aisle-space { width: 6px; }
     .row-num { width: 13px; font-size: 6px; }
     .seat-row { margin: 0.5px 0; }
   }
@@ -386,8 +386,11 @@ allParsedMaps = flightList.map((fd, fi) => {
     data: fd,
     parsed: parseSeatMap(fd),
 
-    // Use the corresponding route from trip_summary
-    label: tripLabels[fi] || `Flight ${fi + 1}`,
+    // Show the actual flight route/name in the tab.
+    // trip_summary is used only if the API does not provide a route.
+    label: buildFlightLabel(fd) !== 'Flight'
+      ? buildFlightLabel(fd)
+      : (tripLabels[fi] || `Flight ${fi + 1}`),
 
     flightNum: buildFlightNum(fd),
     journeyKey: resolveJourneyKeyForFlight(fd, fi)
@@ -609,22 +612,18 @@ function renderSeatMap({ rowMap, sortedRows }) {
   const root = document.getElementById('seatmap-root');
   root.innerHTML = '';
 
-  // Fixed layout: Exit | Row | A B C | Aisle | D E F | Exit
+  // Fixed layout: Exit | Row | A B C | aisle | D E F | Exit
   const LEFT = ['A', 'B', 'C'];
   const RIGHT = ['D', 'E', 'F'];
 
   const hdr = document.createElement('div');
   hdr.className = 'col-headers';
 
-  // Left exit column
-  const leftExitHeader = document.createElement('div');
-  leftExitHeader.className = 'exit-side empty';
-  hdr.appendChild(leftExitHeader);
-
-  // Row number header
-  const rowHeader = document.createElement('div');
-  rowHeader.className = 'row-num';
-  hdr.appendChild(rowHeader);
+  ['',''].forEach(() => {
+    const d = document.createElement('div');
+    d.className = 'exit-side empty';
+    hdr.appendChild(d);
+  });
 
   LEFT.forEach(c => {
     const d = document.createElement('div');
@@ -644,44 +643,35 @@ function renderSeatMap({ rowMap, sortedRows }) {
     hdr.appendChild(d);
   });
 
-  // Right exit column
-  const rightExitHeader = document.createElement('div');
-  rightExitHeader.className = 'exit-side empty';
-  hdr.appendChild(rightExitHeader);
-
+  const rightHdr = document.createElement('div');
+  rightHdr.className = 'exit-side empty';
+  hdr.appendChild(rightHdr);
   root.appendChild(hdr);
 
   sortedRows.forEach(rowNum => {
     const rowData = rowMap[rowNum] ?? {};
     const isExit = Object.values(rowData).some(seat => seat?.isExit);
-
     const rowDiv = document.createElement('div');
     rowDiv.className = 'seat-row';
 
-    // One Exit label only on the far left of an exit row
     const leftExit = document.createElement('div');
     leftExit.className = `exit-side ${isExit ? '' : 'empty'}`;
     leftExit.textContent = isExit ? 'Exit' : '';
     rowDiv.appendChild(leftExit);
 
-    // Row number
     const numDiv = document.createElement('div');
     numDiv.className = 'row-num';
     numDiv.textContent = rowNum;
     rowDiv.appendChild(numDiv);
 
-    // A B C
     LEFT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
 
-    // Aisle
     const aisle = document.createElement('div');
     aisle.className = 'aisle-space';
     rowDiv.appendChild(aisle);
 
-    // D E F
     RIGHT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
 
-    // One Exit label only on the far right of an exit row
     const rightExit = document.createElement('div');
     rightExit.className = `exit-side ${isExit ? '' : 'empty'}`;
     rightExit.textContent = isExit ? 'Exit' : '';
@@ -821,6 +811,14 @@ function sendSeatSelectionToBot(payload) {
   }else {
     console.log('Seat selection payload:', payload);
   }
+}
+
+function getSelectedSeatTotal() {
+  let total = 0;
+  perFlightSeats.forEach(fs => {
+    Object.values(fs || {}).forEach(p => { total += Number(p?.fee) || 0; });
+  });
+  return total;
 }
 
 function toggleSummary() {
