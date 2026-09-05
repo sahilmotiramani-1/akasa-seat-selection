@@ -777,7 +777,7 @@ function sendSeatSelectionToBot(payload) {
   const data = parts.join('||');
 
   const encoded = encodeURIComponent(data.split(',').join(';;').split('&').join('^%'));
-  const text = `{api_name:akasa_seat_selection,data:${encoded}}`;
+  const text = `{always execute function \`seat_selection\`,data:${encoded}}`;
   const executeText = `{always execute function \`seat_selection\` ,data:${encoded}}`;
 
   if (window.parent && window.parent !== window) {
