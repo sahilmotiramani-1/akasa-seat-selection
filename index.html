@@ -86,7 +86,7 @@
   #error-box { display: none; margin: 20px; padding: 20px; background: #fff8f2; border: 1.5px solid #e8630a; border-radius: 8px; font-size: 13px; line-height: 1.8; color: #333; }
   #error-box strong { color: #c00; font-size: 15px; display: block; margin-bottom: 8px; }
   #error-box code   { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
-  /* ── SEATMAP ALIGNMENT: Exit | A B C | D E F | Exit ── */
+  /* ── SEATMAP ALIGNMENT: A B C | D E F ── */
   .col-headers {
     display: flex;
     align-items: center;
@@ -134,25 +134,9 @@
   .s-empty  { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
   .s-blocked{ background: #f3f4f6; border-color: #ddd; color: #bbb; cursor: not-allowed; }
 
-  /* Exit markers sit on the OUTER left/right sides of exit rows. */
-  .exit-side {
-    width: 42px;
-    flex: 0 0 42px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #e8630a;
-    color: #fff;
-    font-size: 8px;
-    font-weight: 800;
-    border-radius: 3px;
-    letter-spacing: 0.3px;
-  }
-  .exit-side.empty {
-    visibility: hidden;
-    background: transparent;
-  }
+  .exit-label-row { display: flex; align-items: center; gap: 3px; margin: 4px 0; padding-left: 27px; }
+  .exit-lbl    { background: #e8630a; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 0; border-radius: 3px; text-align: center; letter-spacing: 0.5px; width: 38px; flex-shrink: 0; }
+  .exit-spacer { width: 38px; flex-shrink: 0; }
   
   /* ── BOTTOM BAR ── */
   .bottom-bar {
@@ -182,8 +166,7 @@
   
   @media (max-width: 768px) {
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
-    .col-hdr { width: 28px; font-size: 7px; }
-    .exit-side { width: 32px; flex-basis: 32px; height: 24px; font-size: 6px; }
+    .col-hdr, .exit-lbl, .exit-spacer { width: 28px; font-size: 7px; }
     .aisle-space { width: 14px; }
     .col-headers, .exit-label-row { padding-left: 20px; }
     .row-num { width: 18px; font-size: 8px; }
@@ -192,8 +175,7 @@
   }
   @media (max-width: 480px) {
     .seat { width: 23px; height: 20px; font-size: 5px; }
-    .col-hdr { width: 23px; }
-    .exit-side { width: 26px; flex-basis: 26px; height: 20px; font-size: 5px; }
+    .col-hdr, .exit-lbl, .exit-spacer { width: 23px; }
     .aisle-space { width: 10px; }
     .row-num { width: 13px; font-size: 6px; }
     .seat-row { gap: 1.5px; margin: 0.5px 0; }
@@ -243,7 +225,8 @@
 <!-- ⑥ BOTTOM BAR -->
 <div class="bottom-bar">
   <div class="price-info">
-    <div class="price-total" id="price-display">INR 0</div>
+    <div class="price-total" id="price-display">Loading...</div>
+    <div class="price-link" onclick="toggleSummary()">View summary</div>
   </div>
   <div class="action-area">
     <button class="btn-action btn-primary"   id="confirm-btn" onclick="handleConfirm()">Confirm seat</button>
@@ -270,6 +253,8 @@ let journeyKeys = [];
 let passengerKeys = [];
 let customerNumber = '';
 let pnr = '';
+let tripSummary = '';
+let totalAmount = 0;
 let currencyCode = 'INR';
 let segmentMap = [];
 
@@ -504,16 +489,21 @@ function updateUIForFlight() {
     }
   }
 
-  // Seat-selection price only: starts at 0 and reflects selected seat fees.
+  // FIXED: Use totalAmount from query params if available
   let totalFee = 0;
-  perFlightSeats.forEach(fs => {
-    Object.values(fs).forEach(p => {
-      totalFee += Number(p?.fee) || 0;
-    });
-  });
-
+  perFlightSeats.forEach(fs => { Object.values(fs).forEach(p => { totalFee += p.fee; }); });
   const priceDisplay = document.getElementById('price-display');
-  priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
+
+  if (totalAmount > 0) {
+    const finalPrice = totalAmount + totalFee;
+    priceDisplay.textContent = currencyCode + ' ' + finalPrice.toLocaleString('en-IN');
+  } else if (totalFee > 0) {
+    // If only seat fees are available, show those instead of inventing a booking total.
+    priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
+  } else {
+    // No booking total available yet.
+    priceDisplay.textContent = 'Loading...';
+  }
 }
 
 function updateConfirmButton() {
@@ -602,19 +592,14 @@ function extractPassengerNames(data) {
 function renderSeatMap({ rowMap, sortedRows }) {
   const root = document.getElementById('seatmap-root');
   root.innerHTML = '';
-
-  // Layout:
-  // row | Exit | A B C | D E F | Exit
-  // Exit markers are inline with the row and only appear on exit rows.
+  // Akasa 737 MAX seat layout: A B C | D E F.
+  // Keep the columns fixed so the headers and every row stay perfectly aligned,
+  // even when a particular row has a missing/blocked seat.
   const LEFT = ['A', 'B', 'C'];
   const RIGHT = ['D', 'E', 'F'];
 
   const hdr = document.createElement('div');
   hdr.className = 'col-headers';
-
-  const leftHeaderExit = document.createElement('div');
-  leftHeaderExit.className = 'exit-side empty';
-  hdr.appendChild(leftHeaderExit);
 
   LEFT.forEach(c => {
     const d = document.createElement('div');
@@ -634,50 +619,41 @@ function renderSeatMap({ rowMap, sortedRows }) {
     hdr.appendChild(d);
   });
 
-  const rightHeaderExit = document.createElement('div');
-  rightHeaderExit.className = 'exit-side empty';
-  hdr.appendChild(rightHeaderExit);
-
   root.appendChild(hdr);
 
-  sortedRows.forEach(rowNum => {
+  let prevExit = false;
+  sortedRows.forEach((rowNum, idx) => {
     const rowData = rowMap[rowNum] ?? {};
-    const rowHasExit = Object.values(rowData).some(info => info?.isExit);
+    const isExit = Object.keys(rowData).some(c => rowData[c]?.isExit);
+    if (isExit && !prevExit) root.appendChild(buildExitLabelRow(rowData, LEFT, RIGHT));
 
-    const rowDiv = document.createElement('div');
-    rowDiv.className = 'seat-row';
-
-    const numDiv = document.createElement('div');
-    numDiv.className = 'row-num';
-    numDiv.textContent = rowNum;
+    const rowDiv = document.createElement('div'); rowDiv.className = 'seat-row';
+    const numDiv = document.createElement('div'); numDiv.className = 'row-num'; numDiv.textContent = rowNum;
     rowDiv.appendChild(numDiv);
-
-    // OUTER LEFT exit.
-    const leftExit = document.createElement('div');
-    leftExit.className = 'exit-side' + (rowHasExit ? '' : ' empty');
-    leftExit.textContent = rowHasExit ? 'Exit' : '';
-    rowDiv.appendChild(leftExit);
-
-    LEFT.forEach(c => {
-      rowDiv.appendChild(buildSeat(rowData[c], rowNum, c));
-    });
-
-    const aisle = document.createElement('div');
-    aisle.className = 'aisle-space';
-    rowDiv.appendChild(aisle);
-
-    RIGHT.forEach(c => {
-      rowDiv.appendChild(buildSeat(rowData[c], rowNum, c));
-    });
-
-    // OUTER RIGHT exit.
-    const rightExit = document.createElement('div');
-    rightExit.className = 'exit-side' + (rowHasExit ? '' : ' empty');
-    rightExit.textContent = rowHasExit ? 'Exit' : '';
-    rowDiv.appendChild(rightExit);
-
+    LEFT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
+    const aisle = document.createElement('div'); aisle.className = 'aisle-space'; rowDiv.appendChild(aisle);
+    RIGHT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
     root.appendChild(rowDiv);
+
+    const nextRow = sortedRows[idx + 1];
+    const nextIsExit = nextRow ? Object.keys(rowMap[nextRow] ?? {}).some(c => rowMap[nextRow][c]?.isExit) : false;
+    if (isExit && !nextIsExit) root.appendChild(buildExitLabelRow(rowData, LEFT, RIGHT));
+    prevExit = isExit;
   });
+}
+
+function buildExitLabelRow(rowData, LEFT, RIGHT) {
+  const wrap = document.createElement('div'); wrap.className = 'exit-label-row';
+  const mk = col => {
+    const d = document.createElement('div');
+    if (rowData[col]?.isExit) { d.className = 'exit-lbl'; d.textContent = 'Exit'; }
+    else d.className = 'exit-spacer';
+    return d;
+  };
+  LEFT.forEach(c => wrap.appendChild(mk(c)));
+  const a = document.createElement('div'); a.className = 'aisle-space'; wrap.appendChild(a);
+  RIGHT.forEach(c => wrap.appendChild(mk(c)));
+  return wrap;
 }
 
 function buildSeat(info, rowNum, col) {
@@ -812,6 +788,14 @@ function sendSeatSelectionToBot(payload) {
   }
 }
 
+function toggleSummary() {
+  if (tripSummary) {
+    alert(`Trip Summary:\n${tripSummary}\n\nTotal: ${currencyCode} ${totalAmount.toLocaleString('en-IN')}`);
+  } else {
+    alert('No trip summary available');
+  }
+}
+
 function confirmSeat() {
   const payload = buildSeatSelectionPayload();
   if (!payload) { alert('Please select seats for passengers.'); return; }
@@ -852,9 +836,11 @@ function init() {
     segmentMap = JSON.parse(getQueryParam('segment_map') || '[]');
   } catch (e) { segmentMap = []; }
   
-  // Seat-selection pricing uses seat fees only.
+  // FIXED: Read trip_summary, total_amount, and currency from query params
+  tripSummary = getQueryParam('trip_summary') || '';
+  const amountStr = getQueryParam('total_amount');
+  totalAmount = amountStr ? parseFloat(amountStr) : 0;
   currencyCode = getQueryParam('currency') || 'INR';
-  document.getElementById('price-display').textContent = currencyCode + ' 0';
 
   if (apiBaseUrl && authToken) {
     loadAndRenderFromApi();
