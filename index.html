@@ -495,21 +495,12 @@ function updateUIForFlight() {
     }
   }
 
-  // FIXED: Use totalAmount from query params if available
+  // Show only the seat-selection fee total, not the ticket price.
+  // Starts at 0 and increases as seats are selected.
   let totalFee = 0;
   perFlightSeats.forEach(fs => { Object.values(fs).forEach(p => { totalFee += p.fee; }); });
   const priceDisplay = document.getElementById('price-display');
-
-  if (totalAmount > 0) {
-    const finalPrice = totalAmount + totalFee;
-    priceDisplay.textContent = currencyCode + ' ' + finalPrice.toLocaleString('en-IN');
-  } else if (totalFee > 0) {
-    // If only seat fees are available, show those instead of inventing a booking total.
-    priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
-  } else {
-    // No booking total available yet.
-    priceDisplay.textContent = 'Loading...';
-  }
+  priceDisplay.textContent = currencyCode + ' ' + totalFee.toLocaleString('en-IN');
 }
 
 function updateConfirmButton() {
