@@ -92,7 +92,6 @@
     align-items: center;
     gap: 3px;
     margin-bottom: 4px;
-    padding-left: 27px;
   }
   .col-hdr {
     width: 38px;
@@ -134,9 +133,16 @@
   .s-empty  { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
   .s-blocked{ background: #f3f4f6; border-color: #ddd; color: #bbb; cursor: not-allowed; }
 
-  .exit-label-row { display: flex; align-items: center; gap: 3px; margin: 4px 0; padding-left: 27px; }
-  .exit-lbl    { background: #e8630a; color: #fff; font-size: 9px; font-weight: 800; padding: 2px 0; border-radius: 3px; text-align: center; letter-spacing: 0.5px; width: 38px; flex-shrink: 0; }
-  .exit-spacer { width: 38px; flex-shrink: 0; }
+  /* Exit indicator now sits beside its own row (like a small door tag at each
+     end of the exit-row seats) instead of consuming a whole extra "row" of
+     seat-sized cells above/below the grid. */
+  .exit-tag {
+    width: 16px; flex: 0 0 16px; align-self: stretch;
+    background: #e8630a; color: #fff; font-size: 7px; font-weight: 800;
+    border-radius: 3px; display: flex; align-items: center; justify-content: center;
+    writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: 0.5px;
+  }
+  .exit-tag-slot { width: 16px; flex: 0 0 16px; }
   
   /* ── BOTTOM BAR ── */
   .bottom-bar {
@@ -166,21 +172,21 @@
   
   @media (max-width: 768px) {
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
-    .col-hdr, .exit-lbl, .exit-spacer { width: 28px; font-size: 7px; }
+    .col-hdr { width: 28px; font-size: 7px; }
+    .exit-tag, .exit-tag-slot { width: 12px; flex: 0 0 12px; font-size: 6px; }
     .aisle-space { width: 14px; }
-    .col-headers, .exit-label-row { padding-left: 20px; }
     .row-num { width: 18px; font-size: 8px; }
     .bottom-bar { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
     .btn-action { padding: 8px 14px; font-size: 12px; }
   }
   @media (max-width: 480px) {
     .seat { width: 23px; height: 20px; font-size: 5px; }
-    .col-hdr, .exit-lbl, .exit-spacer { width: 23px; }
+    .col-hdr { width: 23px; }
+    .exit-tag, .exit-tag-slot { width: 9px; flex: 0 0 9px; font-size: 5px; }
     .aisle-space { width: 10px; }
     .row-num { width: 13px; font-size: 6px; }
     .seat-row { gap: 1.5px; margin: 0.5px 0; }
-    .col-headers { gap: 1.5px; padding-left: 14px; }
-    .exit-label-row { padding-left: 14px; gap: 1.5px; }
+    .col-headers { gap: 1.5px; }
   }
 </style>
 </head>
@@ -601,6 +607,14 @@ function renderSeatMap({ rowMap, sortedRows }) {
   const hdr = document.createElement('div');
   hdr.className = 'col-headers';
 
+  const hdrLeadSlot = document.createElement('div');
+  hdrLeadSlot.className = 'exit-tag-slot';
+  hdr.appendChild(hdrLeadSlot);
+
+  const hdrRowNumSlot = document.createElement('div');
+  hdrRowNumSlot.className = 'row-num';
+  hdr.appendChild(hdrRowNumSlot);
+
   LEFT.forEach(c => {
     const d = document.createElement('div');
     d.className = 'col-hdr';
@@ -619,41 +633,36 @@ function renderSeatMap({ rowMap, sortedRows }) {
     hdr.appendChild(d);
   });
 
+  const hdrTrailSlot = document.createElement('div');
+  hdrTrailSlot.className = 'exit-tag-slot';
+  hdr.appendChild(hdrTrailSlot);
+
   root.appendChild(hdr);
 
-  let prevExit = false;
-  sortedRows.forEach((rowNum, idx) => {
+  sortedRows.forEach(rowNum => {
     const rowData = rowMap[rowNum] ?? {};
     const isExit = Object.keys(rowData).some(c => rowData[c]?.isExit);
-    if (isExit && !prevExit) root.appendChild(buildExitLabelRow(rowData, LEFT, RIGHT));
 
     const rowDiv = document.createElement('div'); rowDiv.className = 'seat-row';
+    // Exit doors sit right beside the seats in that row (not as a separate
+    // full-width row of their own), so a small "EXIT" tag is attached to
+    // both ends of the row whenever it's an exit row.
+    rowDiv.appendChild(buildExitTag(isExit));
     const numDiv = document.createElement('div'); numDiv.className = 'row-num'; numDiv.textContent = rowNum;
     rowDiv.appendChild(numDiv);
     LEFT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
     const aisle = document.createElement('div'); aisle.className = 'aisle-space'; rowDiv.appendChild(aisle);
     RIGHT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
+    rowDiv.appendChild(buildExitTag(isExit));
     root.appendChild(rowDiv);
-
-    const nextRow = sortedRows[idx + 1];
-    const nextIsExit = nextRow ? Object.keys(rowMap[nextRow] ?? {}).some(c => rowMap[nextRow][c]?.isExit) : false;
-    if (isExit && !nextIsExit) root.appendChild(buildExitLabelRow(rowData, LEFT, RIGHT));
-    prevExit = isExit;
   });
 }
 
-function buildExitLabelRow(rowData, LEFT, RIGHT) {
-  const wrap = document.createElement('div'); wrap.className = 'exit-label-row';
-  const mk = col => {
-    const d = document.createElement('div');
-    if (rowData[col]?.isExit) { d.className = 'exit-lbl'; d.textContent = 'Exit'; }
-    else d.className = 'exit-spacer';
-    return d;
-  };
-  LEFT.forEach(c => wrap.appendChild(mk(c)));
-  const a = document.createElement('div'); a.className = 'aisle-space'; wrap.appendChild(a);
-  RIGHT.forEach(c => wrap.appendChild(mk(c)));
-  return wrap;
+function buildExitTag(isExit) {
+  const d = document.createElement('div');
+  if (isExit) { d.className = 'exit-tag'; d.textContent = 'EXIT'; }
+  else d.className = 'exit-tag-slot';
+  return d;
 }
 
 function buildSeat(info, rowNum, col) {
