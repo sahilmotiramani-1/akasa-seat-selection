@@ -763,28 +763,56 @@ function buildSeatSelectionPayload() {
   return selectedItems.join(';');
 }
 
+function getSelectedSeatAmount() {
+  let totalFee = 0;
+
+  perFlightSeats.forEach(flightSeats => {
+    Object.values(flightSeats || {}).forEach(seatInfo => {
+      totalFee += Number(seatInfo?.fee || 0);
+    });
+  });
+
+  return totalFee;
+}
+
 function sendSeatSelectionToBot(payload) {
   const parts = [];
+
   if (pnr) {
     parts.push(`pnr=${encodeURIComponent(pnr)}`);
   }
+
+  // Calculate the exact amount for the seats selected by all passengers
+  // across all flights.
+  const seatAmount = getSelectedSeatAmount();
+
   parts.push(
     `journey_keys=${encodeURIComponent(journeyKeys.join(','))}`,
     `passenger_keys=${encodeURIComponent(passengerKeys.join(','))}`,
     `selected_seats=${encodeURIComponent(payload)}`,
+    `seat_amount=${encodeURIComponent(seatAmount)}`,
+    `seat_currency=${encodeURIComponent(currencyCode)}`
   );
 
   const data = parts.join('||');
 
-  const encoded = encodeURIComponent(data.split(',').join(';;').split('&').join('^%'));
+  const encoded = encodeURIComponent(
+    data.split(',').join(';;').split('&').join('^%')
+  );
+
   const text = `{always execute function \`seat_selection\`,data:${encoded}}`;
-  const executeText = `{always execute function \`seat_selection\` ,data:${encoded}}`;
 
   if (window.parent && window.parent !== window) {
-    window.parent.postMessage(`http://haptik-webview//perform-action?action=close&message=${text}&message_type=0`, '*');
-    // window.parent.postMessage(`http://haptik-webview//perform-action?action=close&message=${executeText}&message_type=0`, '*');
-  }else {
-    console.log('Seat selection payload:', payload);
+    window.parent.postMessage(
+      `http://haptik-webview//perform-action?action=close&message=${text}&message_type=0`,
+      '*'
+    );
+  } else {
+    console.log('Seat selection payload:', {
+      payload: payload,
+      seatAmount: seatAmount,
+      currency: currencyCode
+    });
   }
 }
 
