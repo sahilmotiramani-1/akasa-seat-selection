@@ -127,8 +127,9 @@
   }
   .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.18); z-index: 2; position: relative; }
   .s-std    { background: #fff;    border-color: #ccc;    color: #666; }
+  .s-recliner { background: #f7f2ff; border-color: #8b5cf6; color: #5b21b6; }
   .s-leg    { background: #fff8e1; border-color: #e8630a; color: #b84000; }
-  .s-occ    { background: #e8630a; border-color: #c44d00; color: #fff; cursor: not-allowed; }
+  .s-occ    { background: #f3f4f6; border-color: #bfc3c8; color: #777; cursor: not-allowed; }
   .s-sel    { background: #1a73e8; border-color: #0d5cb6; color: #fff; }
   .s-empty  { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
   .s-blocked{ background: #f3f4f6; border-color: #ddd; color: #bbb; cursor: not-allowed; }
@@ -171,22 +172,31 @@
   }
   
   @media (max-width: 768px) {
+    .col-headers,
+    .seat-row {
+      grid-template-columns: 12px 20px repeat(3, 28px) 14px repeat(3, 28px) 12px;
+      column-gap: 2px;
+    }
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
     .col-hdr { width: 28px; font-size: 7px; }
-    .exit-tag, .exit-tag-slot { width: 12px; flex: 0 0 12px; font-size: 6px; }
+    .exit-tag, .exit-tag-slot { width: 12px; min-height: 24px; font-size: 6px; }
     .aisle-space { width: 14px; }
-    .row-num { width: 18px; font-size: 8px; }
+    .row-num { width: 20px; font-size: 8px; }
     .bottom-bar { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
     .btn-action { padding: 8px 14px; font-size: 12px; }
   }
   @media (max-width: 480px) {
+    .col-headers,
+    .seat-row {
+      grid-template-columns: 9px 15px repeat(3, 23px) 10px repeat(3, 23px) 9px;
+      column-gap: 1.5px;
+    }
     .seat { width: 23px; height: 20px; font-size: 5px; }
     .col-hdr { width: 23px; }
-    .exit-tag, .exit-tag-slot { width: 9px; flex: 0 0 9px; font-size: 5px; }
+    .exit-tag, .exit-tag-slot { width: 9px; min-height: 20px; font-size: 5px; }
     .aisle-space { width: 10px; }
-    .row-num { width: 13px; font-size: 6px; }
-    .seat-row { gap: 1.5px; margin: 0.5px 0; }
-    .col-headers { gap: 1.5px; }
+    .row-num { width: 15px; font-size: 6px; }
+    .seat-row { margin: 0.5px 0; }
   }
 </style>
 </head>
@@ -215,7 +225,8 @@
   <div class="legend">
     <div class="leg-item"><div class="leg-swatch" style="background:#fff8e1;border-color:#e8630a;"></div> A+</div>
     <div class="leg-item"><div class="leg-swatch" style="background:#f3f4f6;border-color:#ccc;"></div> Non-reclining</div>
-    <div class="leg-item"><div class="leg-swatch" style="background:#e8630a;border-color:#c44d00;"></div> Occupied</div>
+    <div class="leg-item"><div class="leg-swatch" style="background:#f7f2ff;border-color:#8b5cf6;"></div> Recliner</div>
+    <div class="leg-item"><div class="leg-swatch" style="background:#f3f4f6;border-color:#bfc3c8;"></div> Occupied</div>
   </div>
 </div>
 
@@ -543,7 +554,18 @@ function parseSeatMap(data) {
     });
   });
 
-  const hasProp = (u, code) => (u.properties ?? []).some(p => p.code === code && p.value === 'True');
+  const hasProp = (u, code) => (u.properties ?? []).some(
+    p => String(p?.code ?? '').toUpperCase() === code.toUpperCase() &&
+         String(p?.value ?? '').toLowerCase() === 'true'
+  );
+
+  // Akasa/QP seat-map payloads can use slightly different property names.
+  // Detect both the explicit codes and descriptive variants.
+  const hasPropertyLike = (u, regex) => (u.properties ?? []).some(p =>
+    regex.test(String(p?.code ?? '').toUpperCase()) &&
+    String(p?.value ?? '').toLowerCase() === 'true'
+  );
+
   const rowMap = {};
   allUnits.forEach(u => {
     if (!u.designator || u.designator.startsWith('$')) return;
@@ -589,9 +611,10 @@ function extractPassengerNames(data) {
 function renderSeatMap({ rowMap, sortedRows }) {
   const root = document.getElementById('seatmap-root');
   root.innerHTML = '';
-  // Akasa 737 MAX seat layout: A B C | D E F.
-  // Keep the columns fixed so the headers and every row stay perfectly aligned,
-  // even when a particular row has a missing/blocked seat.
+
+  // Akasa 737 MAX layout: A B C | D E F.
+  // Every row uses exactly the same grid columns, including placeholders
+  // for missing seats, so all letters remain aligned with their seats.
   const LEFT = ['A', 'B', 'C'];
   const RIGHT = ['D', 'E', 'F'];
 
@@ -634,16 +657,24 @@ function renderSeatMap({ rowMap, sortedRows }) {
     const rowData = rowMap[rowNum] ?? {};
     const isExit = Object.keys(rowData).some(c => rowData[c]?.isExit);
 
-    const rowDiv = document.createElement('div'); rowDiv.className = 'seat-row';
-    // Exit doors sit right beside the seats in that row (not as a separate
-    // full-width row of their own), so a small "EXIT" tag is attached to
-    // both ends of the row whenever it's an exit row.
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'seat-row';
+
     rowDiv.appendChild(buildExitTag(isExit));
-    const numDiv = document.createElement('div'); numDiv.className = 'row-num'; numDiv.textContent = rowNum;
+
+    const numDiv = document.createElement('div');
+    numDiv.className = 'row-num';
+    numDiv.textContent = rowNum;
     rowDiv.appendChild(numDiv);
+
     LEFT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
-    const aisle = document.createElement('div'); aisle.className = 'aisle-space'; rowDiv.appendChild(aisle);
+
+    const aisle = document.createElement('div');
+    aisle.className = 'aisle-space';
+    rowDiv.appendChild(aisle);
+
     RIGHT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
+
     rowDiv.appendChild(buildExitTag(isExit));
     root.appendChild(rowDiv);
   });
@@ -657,22 +688,50 @@ function buildExitTag(isExit) {
 }
 
 function buildSeat(info, rowNum, col) {
-  const div = document.createElement('div'); div.className = 'seat';
-  if (!info) { div.classList.add('s-empty'); return div; }
+  const div = document.createElement('div');
+  div.className = 'seat';
+
+  if (!info) {
+    div.classList.add('s-empty');
+    return div;
+  }
+
   const occ = !info.assignable || info.avail === 0;
-  div.classList.add(occ ? 's-occ' : (info.isLeg || info.isExit) ? 's-leg' : 's-std');
-  if (isPreferredSeat(info, currentPaxId)) div.classList.add('s-preferred');
-  div.textContent = info.price === 0 ? 'Free' : '₹' + info.price;
+
+  if (occ) {
+    // BOOKED / UNAVAILABLE: never show price.
+    div.classList.add('s-occ');
+    div.textContent = '✕';
+    div.title = `${info.des} — Occupied`;
+  } else if (info.isLeg || info.isExit) {
+    div.classList.add('s-leg');
+    div.textContent = info.price === 0 ? 'Free' : '₹' + info.price;
+  } else if (info.isRecliner) {
+    div.classList.add('s-recliner');
+    div.textContent = info.price === 0 ? 'Free' : '₹' + info.price;
+  } else {
+    div.classList.add('s-std');
+    div.textContent = info.price === 0 ? 'Free' : '₹' + info.price;
+  }
+
   div.dataset.rowCol = `${rowNum}${col}`;
   div.dataset.price = info.price;
   div.dataset.isLeg = info.isLeg ? '1' : '0';
   div.dataset.isExit = info.isExit ? '1' : '0';
+  div.dataset.isRecliner = info.isRecliner ? '1' : '0';
+  div.dataset.isNonReclining = info.isNonReclining ? '1' : '0';
   div.dataset.isWindow = info.isWindow ? '1' : '0';
   div.dataset.isAisle = info.isAisle ? '1' : '0';
-  if (!occ) div.addEventListener('click', () => handleSeatClick(div, info, rowNum, col));
+  div.dataset.occupied = occ ? '1' : '0';
+
+  if (!occ) {
+    div.addEventListener('click', () => handleSeatClick(div, info, rowNum, col));
+  }
+
   div.addEventListener('mouseenter', e => showTip(e, info, rowNum, col));
   div.addEventListener('mouseleave', hideTip);
   div.addEventListener('mousemove', moveTip);
+
   return div;
 }
 
@@ -715,18 +774,40 @@ function handleSeatClick(div, info, rowNum, col) {
 
 function refreshSeatVisuals() {
   const seats = flightSeats();
+
   document.querySelectorAll('.seat').forEach(seat => {
-    const rc = seat.dataset.rowCol; if (!rc) return;
+    const rc = seat.dataset.rowCol;
+    if (!rc) return;
+
+    // Seats already occupied in the API must always remain X and must never
+    // be overwritten with a price while changing passenger selection.
+    if (seat.dataset.occupied === '1') {
+      seat.classList.remove('s-sel', 's-blocked', 's-std', 's-leg', 's-recliner');
+      seat.classList.add('s-occ');
+      seat.textContent = '✕';
+      return;
+    }
+
     const mine = seats[currentPaxId]?.seat === rc;
     const other = isSeatTakenByOther(rc, currentPaxId);
-    seat.classList.remove('s-sel', 's-blocked');
+
+    seat.classList.remove('s-sel', 's-blocked', 's-std', 's-leg', 's-recliner');
+
     if (mine) {
-      seat.classList.remove('s-std', 's-leg'); seat.classList.add('s-sel'); seat.textContent = rc;
+      seat.classList.add('s-sel');
+      seat.textContent = rc;
     } else if (other) {
-      seat.classList.add('s-blocked'); seat.textContent = '✗';
+      seat.classList.add('s-blocked');
+      seat.textContent = '✕';
     } else {
-      seat.classList.remove('s-std', 's-leg');
-      seat.classList.add((seat.dataset.isLeg === '1' || seat.dataset.isExit === '1') ? 's-leg' : 's-std');
+      if (seat.dataset.isLeg === '1' || seat.dataset.isExit === '1') {
+        seat.classList.add('s-leg');
+      } else if (seat.dataset.isRecliner === '1') {
+        seat.classList.add('s-recliner');
+      } else {
+        seat.classList.add('s-std');
+      }
+
       seat.textContent = +seat.dataset.price === 0 ? 'Free' : '₹' + seat.dataset.price;
     }
   });
