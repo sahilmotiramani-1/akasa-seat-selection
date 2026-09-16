@@ -100,17 +100,16 @@
     transition: none;
     overflow: visible;
   }
-  /* Thin rear/back accent — always visible below the seat, matching the
-     website's seat accent after rotating the cabin orientation vertically. */
+  /* Thin rear/back accent — inset so adjacent seat accents never touch. */
   .seat::after {
      content: '';
      position: absolute;
-     left: 4px;
-     right: 4px;
-     bottom: -3px;
-     height: 3px;
+     left: 7px;
+     right: 7px;
+     bottom: -2px;
+     height: 2px;
      background: var(--seat-accent);
-     border-radius: 0 0 7px 7px;
+     border-radius: 0 0 5px 5px;
      z-index: 0;
      pointer-events: none;
   }
