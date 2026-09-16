@@ -90,8 +90,8 @@
   /* ── SEATMAP: fixed A B C | D E F alignment ── */
   .col-headers {
     display: grid;
-    grid-template-columns: 28px repeat(3, 38px) 22px repeat(3, 38px);
-    column-gap: 3px;
+    grid-template-columns: 28px repeat(3, 38px) 12px repeat(3, 38px);
+    column-gap: 2px;
     align-items: center;
     margin-bottom: 5px;
   }
@@ -112,8 +112,8 @@
   .seat-row {
     position: relative;
     display: grid;
-    grid-template-columns: 28px repeat(3, 38px) 22px repeat(3, 38px);
-    column-gap: 3px;
+    grid-template-columns: 28px repeat(3, 38px) 12px repeat(3, 38px);
+    column-gap: 2px;
     align-items: center;
     height: 36px;
     margin: 1px 0;
@@ -135,7 +135,7 @@
   }
   .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.18); z-index: 2; position: relative; }
   .s-std    { background: #fff;    border-color: #ccc;    color: #666; }
-  .s-recliner { background: #f7f2ff; border-color: #8b5cf6; color: #5b21b6; }
+  .s-recliner { background: #eaf3ff; border-color: #1a73e8; color: #0d5cb6; }
   .s-non-reclining { background: #fff1f1; border-color: #d32f2f; color: #b71c1c; }
   .s-leg    { background: #fff8e1; border-color: #e8630a; color: #b84000; }
   .s-occ    { background: #f3f4f6; border-color: #bfc3c8; color: #777; cursor: not-allowed; }
@@ -205,14 +205,14 @@
   @media (max-width: 768px) {
     .col-headers,
     .seat-row {
-      grid-template-columns: 20px repeat(3, 28px) 14px repeat(3, 28px);
+      grid-template-columns: 20px repeat(3, 28px) 8px repeat(3, 28px);
       column-gap: 2px;
     }
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
     .col-hdr { width: 28px; font-size: 7px; }
     .exit-tag { width: 12px; height: 24px; left: -16px; font-size: 6px; }
     .seat-row > .exit-tag:last-child { right: -16px; }
-    .aisle-space { width: 14px; }
+    .aisle-space { width: 8px; }
     .row-num { width: 20px; font-size: 8px; }
     .bottom-bar { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
     .btn-action { padding: 8px 14px; font-size: 12px; }
@@ -220,14 +220,14 @@
   @media (max-width: 480px) {
     .col-headers,
     .seat-row {
-      grid-template-columns: 15px repeat(3, 23px) 10px repeat(3, 23px);
+      grid-template-columns: 15px repeat(3, 23px) 7px repeat(3, 23px);
       column-gap: 1.5px;
     }
     .seat { width: 23px; height: 20px; font-size: 5px; }
     .col-hdr { width: 23px; }
     .exit-tag { width: 9px; height: 20px; left: -12px; font-size: 5px; }
     .seat-row > .exit-tag:last-child { right: -12px; }
-    .aisle-space { width: 10px; }
+    .aisle-space { width: 7px; }
     .row-num { width: 15px; font-size: 6px; }
     .seat-row { margin: 0.5px 0; }
   }
@@ -258,7 +258,7 @@
   <div class="legend">
     <div class="leg-item"><div class="leg-swatch" style="background:#fff8e1;border-color:#e8630a;"></div> A+</div>
     <div class="leg-item"><div class="leg-swatch" style="background:#fff1f1;border-color:#d32f2f;"></div> Non-reclining</div>
-    <div class="leg-item"><div class="leg-swatch" style="background:#f7f2ff;border-color:#8b5cf6;"></div> Recliner</div>
+    <div class="leg-item"><div class="leg-swatch" style="background:#eaf3ff;border-color:#1a73e8;"></div> Recliner</div>
     <div class="leg-item"><div class="leg-swatch" style="background:#f3f4f6;border-color:#bfc3c8;"></div> Occupied</div>
   </div>
 </div>
@@ -637,13 +637,13 @@ function parseSeatMap(data) {
     const direct = [
       u?.seatType, u?.seatTypeCode, u?.reclineType,
       u?.reclining, u?.isReclining, u?.nonReclining,
-      u?.isNonReclining
+      u?.isNonReclining, u?.seatTypeName, u?.type
     ].map(v => String(v ?? '').toLowerCase());
 
-    if (direct.some(v => ['recliner', 'reclining', 'true', 'yes'].includes(v))) {
+    if (direct.some(v => ['recliner', 'reclining', 'recline', 'recliner seat', 'reclining seat', 'true', 'yes'].includes(v))) {
       isRecliner = true;
     }
-    if (direct.some(v => ['non-reclining', 'nonreclining', 'no-recline', 'norecline', 'false', 'no'].includes(v))) {
+    if (direct.some(v => ['non-reclining', 'nonreclining', 'non reclining', 'no-recline', 'norecline', 'nonreclining seat', 'non-reclining seat'].includes(v))) {
       isNonReclining = true;
     }
 
