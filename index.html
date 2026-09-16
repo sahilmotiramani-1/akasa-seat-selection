@@ -567,6 +567,57 @@ function parseSeatMap(data) {
     String(p?.value ?? '').toLowerCase() === 'true'
   );
 
+  // Seat type detection: different QP/seat-map responses can expose
+  // reclining information under different property codes/values.
+  const seatTypeFlags = (u) => {
+    const props = Array.isArray(u?.properties) ? u.properties : [];
+    let isRecliner = false;
+    let isNonReclining = false;
+
+    props.forEach(p => {
+      const code = String(p?.code ?? '').toUpperCase().replace(/[-_\\s]/g, '');
+      const value = String(p?.value ?? '').toLowerCase();
+
+      if (
+        (code.includes('RECLINER') || code.includes('RECLINING')) &&
+        (value === 'true' || value === '1' || value === 'yes')
+      ) {
+        isRecliner = true;
+      }
+
+      if (
+        code.includes('NONRECLIN') ||
+        code.includes('NORECLINE') ||
+        (
+          (code.includes('RECLINER') || code.includes('RECLINING') || code === 'RECLINE') &&
+          (value === 'false' || value === '0' || value === 'no')
+        )
+      ) {
+        if (value === 'true' || value === '1' || value === 'yes' ||
+            code.includes('NONRECLIN') || code.includes('NORECLINE')) {
+          isNonReclining = true;
+        }
+      }
+    });
+
+    // Some payloads put the feature directly on the unit instead of
+    // inside properties. Keep this as a fallback.
+    const direct = [
+      u?.seatType, u?.seatTypeCode, u?.reclineType,
+      u?.reclining, u?.isReclining, u?.nonReclining,
+      u?.isNonReclining
+    ].map(v => String(v ?? '').toLowerCase());
+
+    if (direct.some(v => ['recliner', 'reclining', 'true', 'yes'].includes(v))) {
+      isRecliner = true;
+    }
+    if (direct.some(v => ['non-reclining', 'nonreclining', 'no-recline', 'norecline', 'false', 'no'].includes(v))) {
+      isNonReclining = true;
+    }
+
+    return { isRecliner, isNonReclining };
+  };
+
   const rowMap = {};
   allUnits.forEach(u => {
     if (!u.designator || u.designator.startsWith('$')) return;
@@ -575,6 +626,7 @@ function parseSeatMap(data) {
     if (!rowMap[row]) rowMap[row] = {};
     const availabilityText = (u.availability ?? '').toString().toLowerCase();
     const isOpen = availabilityText === 'open';
+    const seatType = seatTypeFlags(u);
     rowMap[row][col] = {
       des: u.designator,
       key: u.unitKey,
@@ -588,7 +640,9 @@ function parseSeatMap(data) {
       isExit: hasProp(u, 'EXITROW'),
       isDisab: hasProp(u, 'DISABIL'),
       isPet: hasProp(u, 'PET'),
-      noChild: hasProp(u, 'NCHILD')
+      noChild: hasProp(u, 'NCHILD'),
+      isRecliner: seatType.isRecliner && !seatType.isNonReclining,
+      isNonReclining: seatType.isNonReclining
     };
   });
   return { rowMap, sortedRows: Object.keys(rowMap).map(Number).sort((a, b) => a - b) };
