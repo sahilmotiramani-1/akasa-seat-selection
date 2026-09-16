@@ -87,38 +87,46 @@
   #error-box strong { color: #c00; font-size: 15px; display: block; margin-bottom: 8px; }
   #error-box code   { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 12px; }
   /* ── SEATMAP ALIGNMENT: A B C | D E F ── */
+  /* ── SEATMAP: fixed A B C | D E F alignment ── */
   .col-headers {
-    display: flex;
+    display: grid;
+    grid-template-columns: 28px repeat(3, 38px) 22px repeat(3, 38px);
+    column-gap: 3px;
     align-items: center;
-    gap: 3px;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
   }
+
   .col-hdr {
     width: 38px;
-    flex: 0 0 38px;
     text-align: center;
     font-size: 11px;
     font-weight: 700;
     color: #666;
   }
+
   .aisle-space {
     width: 22px;
-    flex: 0 0 22px;
+    height: 1px;
   }
+
   .seat-row {
-    display: flex;
+    position: relative;
+    display: grid;
+    grid-template-columns: 28px repeat(3, 38px) 22px repeat(3, 38px);
+    column-gap: 3px;
     align-items: center;
-    gap: 3px;
-    margin: 1.5px 0;
+    height: 36px;
+    margin: 1px 0;
   }
+
   .row-num {
-    width: 24px;
-    flex: 0 0 24px;
+    width: 28px;
     text-align: right;
     font-size: 10px;
     color: #aaa;
-    padding-right: 4px;
+    padding-right: 3px;
   }
+
   .seat {
     width: 38px; height: 32px; border-radius: 4px; border: 1.5px solid;
     font-size: 8.5px; font-weight: 600; display: flex; align-items: center;
@@ -128,7 +136,7 @@
   .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked) { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.18); z-index: 2; position: relative; }
   .s-std    { background: #fff;    border-color: #ccc;    color: #666; }
   .s-recliner { background: #f7f2ff; border-color: #8b5cf6; color: #5b21b6; }
-  .s-non-reclining { background: #fff1f1; border-color: #d32f2f; color: #b71c1c; box-shadow: inset 0 0 0 1px rgba(211,47,47,.15); }
+  .s-non-reclining { background: #fff1f1; border-color: #d32f2f; color: #b71c1c; }
   .s-leg    { background: #fff8e1; border-color: #e8630a; color: #b84000; }
   .s-occ    { background: #f3f4f6; border-color: #bfc3c8; color: #777; cursor: not-allowed; }
   .s-sel    { background: #1a73e8; border-color: #0d5cb6; color: #fff; }
@@ -139,12 +147,34 @@
      end of the exit-row seats) instead of consuming a whole extra "row" of
      seat-sized cells above/below the grid. */
   .exit-tag {
-    width: 100%; min-width: 0; height: 24px; flex: 1 1 auto;
-    background: #df1010; color: #fff; font-size: 11px; font-weight: 800;
-    border-radius: 5px; display: flex; align-items: center; justify-content: center;
-    letter-spacing: 0.2px;
+    position: absolute;
+    top: 50%;
+    left: -20px;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 32px;
+    background: #e8630a;
+    color: #fff;
+    font-size: 7px;
+    font-weight: 800;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 0.5px;
+    z-index: 3;
   }
-  .exit-tag-slot { width: 100%; min-width: 0; height: 24px; flex: 1 1 auto; }
+
+  .seat-row > .exit-tag:last-child {
+    left: auto;
+    right: -20px;
+  }
+
+  .exit-tag-slot {
+    display: none;
+  }
   
   /* ── BOTTOM BAR ── */
   .bottom-bar {
@@ -180,7 +210,8 @@
     }
     .seat { width: 28px; height: 24px; font-size: 6.5px; }
     .col-hdr { width: 28px; font-size: 7px; }
-    .exit-tag, .exit-tag-slot { width: 12px; min-height: 24px; font-size: 6px; }
+    .exit-tag { width: 12px; height: 24px; left: -16px; font-size: 6px; }
+    .seat-row > .exit-tag:last-child { right: -16px; }
     .aisle-space { width: 14px; }
     .row-num { width: 20px; font-size: 8px; }
     .bottom-bar { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
@@ -194,7 +225,8 @@
     }
     .seat { width: 23px; height: 20px; font-size: 5px; }
     .col-hdr { width: 23px; }
-    .exit-tag, .exit-tag-slot { width: 9px; min-height: 20px; font-size: 5px; }
+    .exit-tag { width: 9px; height: 20px; left: -12px; font-size: 5px; }
+    .seat-row > .exit-tag:last-child { right: -12px; }
     .aisle-space { width: 10px; }
     .row-num { width: 15px; font-size: 6px; }
     .seat-row { margin: 0.5px 0; }
@@ -567,6 +599,57 @@ function parseSeatMap(data) {
     String(p?.value ?? '').toLowerCase() === 'true'
   );
 
+  // Seat type detection: different QP/seat-map responses can expose
+  // reclining information under different property codes/values.
+  const seatTypeFlags = (u) => {
+    const props = Array.isArray(u?.properties) ? u.properties : [];
+    let isRecliner = false;
+    let isNonReclining = false;
+
+    props.forEach(p => {
+      const code = String(p?.code ?? '').toUpperCase().replace(/[-_\\s]/g, '');
+      const value = String(p?.value ?? '').toLowerCase();
+
+      if (
+        (code.includes('RECLINER') || code.includes('RECLINING')) &&
+        (value === 'true' || value === '1' || value === 'yes')
+      ) {
+        isRecliner = true;
+      }
+
+      if (
+        code.includes('NONRECLIN') ||
+        code.includes('NORECLINE') ||
+        (
+          (code.includes('RECLINER') || code.includes('RECLINING') || code === 'RECLINE') &&
+          (value === 'false' || value === '0' || value === 'no')
+        )
+      ) {
+        if (value === 'true' || value === '1' || value === 'yes' ||
+            code.includes('NONRECLIN') || code.includes('NORECLINE')) {
+          isNonReclining = true;
+        }
+      }
+    });
+
+    // Some payloads put the feature directly on the unit instead of
+    // inside properties. Keep this as a fallback.
+    const direct = [
+      u?.seatType, u?.seatTypeCode, u?.reclineType,
+      u?.reclining, u?.isReclining, u?.nonReclining,
+      u?.isNonReclining
+    ].map(v => String(v ?? '').toLowerCase());
+
+    if (direct.some(v => ['recliner', 'reclining', 'true', 'yes'].includes(v))) {
+      isRecliner = true;
+    }
+    if (direct.some(v => ['non-reclining', 'nonreclining', 'no-recline', 'norecline', 'false', 'no'].includes(v))) {
+      isNonReclining = true;
+    }
+
+    return { isRecliner, isNonReclining };
+  };
+
   const rowMap = {};
   allUnits.forEach(u => {
     if (!u.designator || u.designator.startsWith('$')) return;
@@ -575,6 +658,7 @@ function parseSeatMap(data) {
     if (!rowMap[row]) rowMap[row] = {};
     const availabilityText = (u.availability ?? '').toString().toLowerCase();
     const isOpen = availabilityText === 'open';
+    const seatType = seatTypeFlags(u);
     rowMap[row][col] = {
       des: u.designator,
       key: u.unitKey,
@@ -589,19 +673,8 @@ function parseSeatMap(data) {
       isDisab: hasProp(u, 'DISABIL'),
       isPet: hasProp(u, 'PET'),
       noChild: hasProp(u, 'NCHILD'),
-
-      // Seat type comes directly from the QP/Akasa seat-map property.
-      // RECLINE=True  -> recliner
-      // RECLINE=False -> non-reclining
-      // Missing RECLINE -> leave as standard/unknown.
-      hasReclineProperty: (u.properties ?? []).some(
-        p => String(p?.code ?? '').toUpperCase() === 'RECLINE'
-      ),
-      isRecliner: hasProp(u, 'RECLINE'),
-      isNonReclining: (u.properties ?? []).some(
-        p => String(p?.code ?? '').toUpperCase() === 'RECLINE' &&
-             String(p?.value ?? '').toLowerCase() === 'false'
-      )
+      isRecliner: seatType.isRecliner && !seatType.isNonReclining,
+      isNonReclining: seatType.isNonReclining
     };
   });
   return { rowMap, sortedRows: Object.keys(rowMap).map(Number).sort((a, b) => a - b) };
@@ -609,17 +682,11 @@ function parseSeatMap(data) {
 
 function buildSeatDetail(info) {
   if (!info) return '';
-  const position = info.isWindow ? 'Window'
-    : info.isAisle ? 'Aisle'
-    : info.isLeg ? 'Extra legroom'
-    : info.isExit ? 'Exit row'
-    : 'Middle';
-
-  const type = info.isRecliner ? 'Recliner'
-    : info.isNonReclining ? 'Non-reclining'
-    : '';
-
-  return type ? `${position} • ${type}` : position;
+  if (info.isWindow) return 'Window';
+  if (info.isAisle) return 'Aisle';
+  if (info.isLeg) return 'Extra legroom';
+  if (info.isExit) return 'Exit row';
+  return 'Middle';
 }
 
 function extractPassengerNames(data) {
@@ -632,23 +699,18 @@ function renderSeatMap({ rowMap, sortedRows }) {
   const root = document.getElementById('seatmap-root');
   root.innerHTML = '';
 
-  // Fixed 6-seat layout: A B C | D E F.
-  // Missing seats are represented by empty placeholders, never removed,
-  // so every row stays aligned with every other row.
+  // Akasa 737 MAX layout: A B C | D E F.
+  // Every row uses exactly the same grid columns, including placeholders
+  // for missing seats, so all letters remain aligned with their seats.
   const LEFT = ['A', 'B', 'C'];
   const RIGHT = ['D', 'E', 'F'];
 
-  const gridTemplate = '24px 38px 38px 38px 22px 38px 38px 38px';
-
   const hdr = document.createElement('div');
   hdr.className = 'col-headers';
-  hdr.style.display = 'grid';
-  hdr.style.gridTemplateColumns = gridTemplate;
-  hdr.style.columnGap = '3px';
-  hdr.style.alignItems = 'center';
 
-  const blank = document.createElement('div');
-  hdr.appendChild(blank);
+  const hdrRowNumSlot = document.createElement('div');
+  hdrRowNumSlot.className = 'row-num';
+  hdr.appendChild(hdrRowNumSlot);
 
   LEFT.forEach(c => {
     const d = document.createElement('div');
@@ -657,9 +719,9 @@ function renderSeatMap({ rowMap, sortedRows }) {
     hdr.appendChild(d);
   });
 
-  const aisleHdr = document.createElement('div');
-  aisleHdr.className = 'aisle-space';
-  hdr.appendChild(aisleHdr);
+  const headerAisle = document.createElement('div');
+  headerAisle.className = 'aisle-space';
+  hdr.appendChild(headerAisle);
 
   RIGHT.forEach(c => {
     const d = document.createElement('div');
@@ -674,36 +736,8 @@ function renderSeatMap({ rowMap, sortedRows }) {
     const rowData = rowMap[rowNum] ?? {};
     const isExit = Object.keys(rowData).some(c => rowData[c]?.isExit);
 
-    // Exit indicator sits above/below the actual row, matching the reference UI.
-    if (isExit) {
-      const exitRow = document.createElement('div');
-      exitRow.style.display = 'grid';
-      exitRow.style.gridTemplateColumns = gridTemplate;
-      exitRow.style.columnGap = '3px';
-      exitRow.style.height = '24px';
-      exitRow.style.margin = '2px 0';
-
-      const leftExit = document.createElement('div');
-      leftExit.style.gridColumn = '2 / span 3';
-      leftExit.className = 'exit-tag';
-      leftExit.textContent = 'Exit';
-      exitRow.appendChild(leftExit);
-
-      const rightExit = document.createElement('div');
-      rightExit.style.gridColumn = '6 / span 3';
-      rightExit.className = 'exit-tag';
-      rightExit.textContent = 'Exit';
-      exitRow.appendChild(rightExit);
-
-      root.appendChild(exitRow);
-    }
-
     const rowDiv = document.createElement('div');
     rowDiv.className = 'seat-row';
-    rowDiv.style.display = 'grid';
-    rowDiv.style.gridTemplateColumns = gridTemplate;
-    rowDiv.style.columnGap = '3px';
-    rowDiv.style.alignItems = 'center';
 
     const numDiv = document.createElement('div');
     numDiv.className = 'row-num';
@@ -718,66 +752,20 @@ function renderSeatMap({ rowMap, sortedRows }) {
 
     RIGHT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
 
-    root.appendChild(rowDiv);
-
+    // Exit markers sit beside the row and do not affect row height.
     if (isExit) {
-      const exitRow = document.createElement('div');
-      exitRow.style.display = 'grid';
-      exitRow.style.gridTemplateColumns = gridTemplate;
-      exitRow.style.columnGap = '3px';
-      exitRow.style.height = '24px';
-      exitRow.style.margin = '2px 0';
-
-      const leftExit = document.createElement('div');
-      leftExit.style.gridColumn = '2 / span 3';
-      leftExit.className = 'exit-tag';
-      leftExit.textContent = 'Exit';
-      exitRow.appendChild(leftExit);
-
-      const rightExit = document.createElement('div');
-      rightExit.style.gridColumn = '6 / span 3';
-      rightExit.className = 'exit-tag';
-      rightExit.textContent = 'Exit';
-      exitRow.appendChild(rightExit);
-
-      root.appendChild(exitRow);
+      rowDiv.appendChild(buildExitTag(true));
+      rowDiv.appendChild(buildExitTag(true));
     }
+
+    root.appendChild(rowDiv);
   });
-
-  // Bottom column numbers shown in the reference.
-  const maxCol = 30;
-  const bottom = document.createElement('div');
-  bottom.style.display = 'grid';
-  bottom.style.gridTemplateColumns = '24px repeat(3, 38px) 22px repeat(3, 38px)';
-  bottom.style.columnGap = '3px';
-  bottom.style.marginTop = '5px';
-  bottom.style.alignItems = 'center';
-
-  const bottomBlank = document.createElement('div');
-  bottom.appendChild(bottomBlank);
-
-  for (let i = 1; i <= 30; i++) {
-    const d = document.createElement('div');
-    d.style.fontSize = '11px';
-    d.style.color = '#444';
-    d.style.textAlign = 'center';
-    d.textContent = i;
-    bottom.appendChild(d);
-
-    if (i === 3 || i === 6) {
-      const spacer = document.createElement('div');
-      spacer.style.display = 'none';
-    }
-  }
 }
+
 function buildExitTag(isExit) {
   const d = document.createElement('div');
-  if (isExit) {
-    d.className = 'exit-tag';
-    d.textContent = 'Exit';
-  } else {
-    d.className = 'exit-tag-slot';
-  }
+  if (isExit) { d.className = 'exit-tag'; d.textContent = 'EXIT'; }
+  else d.className = 'exit-tag-slot';
   return d;
 }
 
