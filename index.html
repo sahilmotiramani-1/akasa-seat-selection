@@ -91,16 +91,53 @@
      10px radius, and a FLAT offset box-shadow (no blur/spread) as the color
      accent that pokes out on the right edge — not a glow/ring. */
   .seat {
-    --seat-accent: #d9d9d9; /* neutral default */
-    width: 54px; height: 44px; border-radius: 10px;
-    border-top: 1.5px solid #e5e4e7; border-right: 1.5px solid #e5e4e7; border-left: 1.5px solid #e5e4e7;
-    border-bottom: none;
-    box-shadow: 0px 0 0 0 var(--seat-accent);
-    font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; text-align: center; line-height: 1.15; user-select: none;
-    background: #fff; color: #1a1a2e; position: relative;
-    transition: transform .1s;
-  }
+  --seat-accent: #d9d9d9;
+
+  width: 54px;
+  height: 44px;
+  border-radius: 10px;
+
+  border-top: 1.5px solid #e5e4e7;
+  border-right: 1.5px solid #e5e4e7;
+  border-left: 1.5px solid #e5e4e7;
+  border-bottom: none;
+
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.15;
+  user-select: none;
+
+  background: #fff;
+  color: #1a1a2e;
+
+  position: relative;
+  z-index: 2;
+
+  transition: transform .1s;
+}
+
+/* Red/grey accent sits BEHIND the seat */
+.seat::after {
+  content: "";
+  position: absolute;
+
+  left: 3px;
+  right: 3px;
+  bottom: -4px;
+
+  height: 6px;
+
+  background: var(--seat-accent);
+
+  border-radius: 0 0 6px 6px;
+
+  z-index: -1;
+}
   .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked) { transform: scale(1.07); z-index: 4; }
 
   /* recline-type accent color (the flat right-edge shadow) */
