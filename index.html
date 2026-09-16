@@ -60,7 +60,7 @@
   #error-box strong { color: #c00; font-size: 15px; display: block; margin-bottom: 8px; }
 
   /* ── VERTICAL CABIN: rows stacked top→bottom, letters A B C | D E F across ── */
-  .cabin { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .cabin { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 
   .seat-row, .col-headers {
     display: grid;
@@ -107,8 +107,8 @@
      position: absolute;
      left: 4px;
      right: 4px;
-     bottom: -3px;
-     height: 3px;
+     bottom: -2px;
+     height: 2px;
      background: var(--seat-accent);
      border-radius: 0 0 7px 7px;
      z-index: 0;
@@ -155,7 +155,7 @@
   .seat-tooltip { position: fixed; background: #222; color: #fff; font-size: 11px; padding: 6px 10px; border-radius: 4px; pointer-events: none; z-index: 9999; display: none; white-space: nowrap; line-height: 1.6; }
 
   @media (max-width: 768px) {
-    .cabin { gap: 3px; }
+    .cabin { gap: 5px; }
     .seat-row, .col-headers { grid-template-columns: 26px repeat(3, 42px) 18px repeat(3, 42px) 26px; column-gap: 3px; }
     .seat { width: 42px; height: 34px; font-size: 10px; border-radius: 7px; }
     .row-num, .col-hdr { font-size: 11px; }
@@ -168,7 +168,7 @@
     .btn-action { padding: 8px 14px; font-size: 12px; }
   }
   @media (max-width: 480px) {
-    .cabin { gap: 2px; }
+    .cabin { gap: 4px; }
     .seat-row, .col-headers { grid-template-columns: 22px repeat(3, 36px) 14px repeat(3, 36px) 22px; column-gap: 2px; }
     .seat { width: 36px; height: 30px; font-size: 9px; }
     .aisle-gap { width: 14px; }
