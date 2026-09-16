@@ -98,19 +98,21 @@
     font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
     cursor: pointer; text-align: center; line-height: 1.15; user-select: none;
     background: #fff; color: #1a1a2e; position: relative;
-    transition: transform .1s;
+    transition: none;
+    overflow: visible;
   }
-  /* Thin back accent: always visible behind the seat's back edge. */
+  /* Thin rear/back accent — visible in the normal state, with no hover needed. */
   .seat::after {
      content: '';
      position: absolute;
-     top: 5px;
-     right: -2px;
-     width: 2px;
-     height: 34px;
+     top: 4px;
+     right: -3px;
+     width: 3px;
+     height: 36px;
      background: var(--seat-accent);
-     border-radius: 0 5px 5px 0;
-     z-index: -1;
+     border-radius: 0 6px 6px 0;
+     z-index: 0;
+     pointer-events: none;
   }
 
 
