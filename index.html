@@ -91,53 +91,29 @@
      10px radius, and a FLAT offset box-shadow (no blur/spread) as the color
      accent that pokes out on the right edge — not a glow/ring. */
   .seat {
-  --seat-accent: #d9d9d9;
+    --seat-accent: #d9d9d9; /* neutral default */
+    width: 54px; height: 44px; border-radius: 10px;
+    border-top: 1.5px solid #e5e4e7; border-right: 1.5px solid #e5e4e7; border-left: 1.5px solid #e5e4e7;
+    border-bottom: none;
+    box-shadow: 2px 0 0 0 var(--seat-accent);
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; text-align: center; line-height: 1.15; user-select: none;
+    background: #fff; color: #1a1a2e; position: relative;
+    transition: transform .1s;
+  }
+  /* Seat-type accent sits BEHIND the seat, not on the left/right edge. */
+  .seat::after {
+     content: '';
+     position: absolute;
+     left: 3px;
+     right: 3px;
+     bottom: -5px;
+     height: 7px;
+     background: var(--seat-accent);
+     border-radius: 0 0 7px 7px;
+     z-index: -1;
+  }
 
-  width: 54px;
-  height: 44px;
-  border-radius: 10px;
-
-  border-top: 1.5px solid #e5e4e7;
-  border-right: 1.5px solid #e5e4e7;
-  border-left: 1.5px solid #e5e4e7;
-  border-bottom: none;
-
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  text-align: center;
-  line-height: 1.15;
-  user-select: none;
-
-  background: #fff;
-  color: #1a1a2e;
-
-  position: relative;
-  z-index: 2;
-
-  transition: transform .1s;
-}
-
-/* Red/grey accent sits BEHIND the seat */
-.seat::after {
-  content: "";
-  position: absolute;
-
-  left: 3px;
-  right: 3px;
-  bottom: -4px;
-
-  height: 6px;
-
-  background: var(--seat-accent);
-
-  border-radius: 0 0 6px 6px;
-
-  z-index: -1;
-}
   .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked) { transform: scale(1.07); z-index: 4; }
 
   /* recline-type accent color (the flat right-edge shadow) */
@@ -220,7 +196,7 @@
   <span class="promo-text"><span class="info-dot">i</span> Enjoy generous legroom on our seats starting at just ₹150</span>
   <div class="legend">
     <div class="leg-item"><div class="leg-swatch" style="border-color:#c9a227;box-shadow:2px 0 0 0 #d9d9d9;"></div> A+</div>
-    <div class="leg-item"><div class="leg-swatch" style="border-color:#e5e4e7;box-shadow:-2px 0 0 0 #d32f2f;"></div> Non-reclining</div>
+    <div class="leg-item"><div class="leg-swatch" style="border-color:#e5e4e7;box-shadow:0 3px 0 0 #d32f2f;"></div> Non-reclining</div>
     <div class="leg-item"><div class="leg-swatch" style="border-color:#bfc3c8;background:#f3f4f6;color:#777;">✕</div> Occupied</div>
     <div class="leg-item"><div class="leg-swatch" style="border-color:#2e9e5b;"></div> Free Seat</div>
   </div>
