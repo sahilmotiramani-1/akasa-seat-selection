@@ -86,35 +86,41 @@
   .exit-bar.start { border-top-left-radius: 5px; border-top-right-radius: 5px; }
   .exit-bar.end   { border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; height: 44px; margin-bottom: 0; }
 
-  /* ── SEAT ── */
+  /* ── SEAT ──
+     Matches the real seat button: border on top/right/left only (no bottom),
+     10px radius, and a FLAT offset box-shadow (no blur/spread) as the color
+     accent that pokes out on the right edge — not a glow/ring. */
   .seat {
-    width: 54px; height: 44px; border-radius: 9px; border: 1.8px solid;
+    --seat-accent: #d9d9d9; /* neutral default */
+    width: 54px; height: 44px; border-radius: 10px;
+    border-top: 1.5px solid #e5e4e7; border-right: 1.5px solid #e5e4e7; border-left: 1.5px solid #e5e4e7;
+    border-bottom: none;
+    box-shadow: 2px 0 0 0 var(--seat-accent);
     font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
     cursor: pointer; text-align: center; line-height: 1.15; user-select: none;
-    background: #fff; position: relative;
-    transition: transform .1s, box-shadow .1s;
+    background: #fff; color: #1a1a2e; position: relative;
+    transition: transform .1s;
   }
-  .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked):not(.s-recliner) { transform: scale(1.07); box-shadow: 0 2px 8px rgba(0,0,0,.18); z-index: 4; }
-  .seat.s-recliner:hover:not(.s-occ):not(.s-empty):not(.s-blocked) {
-    transform: scale(1.07); z-index: 4;
-    box-shadow: 0 0 0 3px rgba(139, 26, 26, .16), 0 4px 10px rgba(139, 26, 26, .4);
-  }
+  .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked) { transform: scale(1.07); z-index: 4; }
 
-  /* base faces — clean white pill with a colored border, matching the reference look */
-  .s-std   { border-color: #dcdcdc; color: #1a1a2e; }
-  .s-free  { border-color: #2e9e5b; color: #1f7a45; }
-  .s-non-reclining  { border-color: #d32f2f; color: #b71c1c; }
+  /* recline-type accent color (the flat right-edge shadow) */
+  .s-std           { --seat-accent: #d9d9d9; }
+  .s-free          { --seat-accent: #d9d9d9; border-top-color: #2e9e5b; border-right-color: #2e9e5b; border-left-color: #2e9e5b; color: #1f7a45; }
+  .s-recliner      { --seat-accent: #1a73e8; color: #0d5cb6; }
+  .s-non-reclining { --seat-accent: #d32f2f; color: #b71c1c; }
 
-  /* Recliner is a SHADOW ring (not a solid fill) so it stacks cleanly under an
-     A+ gold border — the seat stays a white pill, just gets a soft red glow. */
-  .s-recliner {
-    border-color: #b7362f; color: #8b241f;
-    box-shadow: 0 0 0 3px rgba(139, 26, 26, .16), 0 3px 7px rgba(139, 26, 26, .30);
-  }
-  .s-occ   { border-color: #e2e2e2; background: #f3f4f6; color: #9aa0a6; cursor: not-allowed; font-size: 18px; }
-  .s-blocked { border-color: #e2e2e2; background: #f3f4f6; color: #bbb; cursor: not-allowed; font-size: 18px; }
-  .s-sel   { background: #1a73e8; border-color: #0d5cb6; color: #fff; }
-  .s-empty { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
+  .s-occ     { border-color: #e2e2e2; background: #f3f4f6; color: #9aa0a6; cursor: not-allowed; font-size: 18px; --seat-accent: transparent; }
+  .s-blocked { border-color: #e2e2e2; background: #f3f4f6; color: #bbb; cursor: not-allowed; font-size: 18px; --seat-accent: transparent; }
+  .s-sel     { background: #1a73e8; border-color: #0d5cb6; color: #fff; --seat-accent: #0d5cb6; }
+  .s-empty   { background: transparent; border-color: transparent; cursor: default; pointer-events: none; --seat-accent: transparent; }
+
+  /* A+ is a BORDER-color modifier (top/right/left) so it layers on top of any
+     recline-type accent — an A+ recliner shows a gold border AND the blue
+     accent shadow at the same time. */
+  .seat.s-aplus { border-top-color: #c9a227; border-right-color: #c9a227; border-left-color: #c9a227; color: #a8791a; }
+  .seat.s-aplus.s-recliner,
+  .seat.s-aplus.s-non-reclining { color: #a8791a; }
+  .seat.s-sel, .seat.s-aplus.s-sel { color: #fff; }
 
   /* A+ is a BORDER modifier so it can stack on top of any face,
      including the recliner shadow-ring (A+ recliner = gold border + red glow). */
@@ -176,10 +182,8 @@
 <div class="promo-bar">
   <span class="promo-text"><span class="info-dot">i</span> Enjoy generous legroom on our seats starting at just ₹150</span>
   <div class="legend">
-    <div class="leg-item"><div class="leg-swatch" style="border-color:#c9a227;"></div> A+</div>
-    <div class="leg-item"><div class="leg-swatch" style="border-color:#d32f2f;"></div> Non-reclining</div>
-    <div class="leg-item"><div class="leg-swatch" style="border-color:#b7362f;background:#fff;box-shadow:0 0 0 2px rgba(139,26,26,.16), 0 2px 5px rgba(139,26,26,.3);"></div> Recliner</div>
-    <div class="leg-item"><div class="leg-swatch" style="border-color:#c9a227;background:#fff;box-shadow:0 0 0 2px rgba(139,26,26,.16), 0 2px 5px rgba(139,26,26,.3);"></div> A+ Recliner</div>
+    <div class="leg-item"><div class="leg-swatch" style="border-color:#c9a227;box-shadow:2px 0 0 0 #d9d9d9;"></div> A+</div>
+    <div class="leg-item"><div class="leg-swatch" style="border-color:#e5e4e7;box-shadow:2px 0 0 0 #d32f2f;"></div> Non-reclining</div>
     <div class="leg-item"><div class="leg-swatch" style="border-color:#bfc3c8;background:#f3f4f6;color:#777;">✕</div> Occupied</div>
     <div class="leg-item"><div class="leg-swatch" style="border-color:#2e9e5b;"></div> Free Seat</div>
   </div>
