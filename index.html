@@ -59,24 +59,32 @@
   #error-box { display: none; margin: 20px; padding: 20px; background: #fff8f2; border: 1.5px solid #e8630a; border-radius: 8px; font-size: 13px; line-height: 1.8; color: #333; }
   #error-box strong { color: #c00; font-size: 15px; display: block; margin-bottom: 8px; }
 
-  /* ── HORIZONTAL CABIN: one column per row-number, letters stacked A B C | D E F ── */
-  .cabin { display: flex; align-items: flex-start; gap: 4px; }
+  /* ── VERTICAL CABIN: rows stacked top→bottom, letters A B C | D E F across ── */
+  .cabin { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 
-  .row-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 0 0 auto; }
+  .seat-row, .col-headers {
+    display: grid;
+    grid-template-columns: 34px repeat(3, 54px) 24px repeat(3, 54px) 34px;
+    column-gap: 4px;
+    align-items: center;
+    position: relative;
+  }
+  .col-headers { margin-bottom: 4px; }
+  .col-hdr { text-align: center; font-size: 14px; font-weight: 700; color: #444; }
 
-  /* exit bar band above & below */
-  .exit-slot { height: 22px; width: 100%; display: flex; align-items: center; }
+  .row-num { text-align: center; font-size: 14px; font-weight: 600; color: #444; }
+  .aisle-gap { width: 24px; }
+
+  /* exit bars sit in the left/right gutters of an exit row and merge vertically */
+  .exit-slot { display: flex; align-items: center; justify-content: center; }
   .exit-bar {
-    width: 100%; height: 22px; background: #c62828; color: #fff;
-    font-size: 12px; font-weight: 700; letter-spacing: .3px;
+    width: 30px; height: 48px; margin-bottom: -4px;
+    background: #c62828; color: #fff;
+    font-size: 10px; font-weight: 700; letter-spacing: .3px;
     display: flex; align-items: center; justify-content: center;
   }
-  .exit-bar.start { border-top-left-radius: 5px; border-bottom-left-radius: 5px; }
-  .exit-bar.end   { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
-
-  .aisle-gap { height: 24px; width: 100%; }
-
-  .row-num { font-size: 15px; font-weight: 600; color: #444; margin-top: 8px; }
+  .exit-bar.start { border-top-left-radius: 5px; border-top-right-radius: 5px; }
+  .exit-bar.end   { border-bottom-left-radius: 5px; border-bottom-right-radius: 5px; height: 44px; margin-bottom: 0; }
 
   /* ── SEAT ── */
   .seat {
@@ -88,21 +96,21 @@
   }
   .seat:hover:not(.s-occ):not(.s-empty):not(.s-blocked) { transform: scale(1.07); box-shadow: 0 2px 8px rgba(0,0,0,.18); z-index: 4; }
 
+  /* base faces (background) */
   .s-std   { border-color: #dcdcdc; color: #1a1a2e; }
   .s-free  { border-color: #2e9e5b; color: #1f7a45; }
-  .s-leg   { border-color: #c9a227; color: #a8791a; }      /* A+ / extra legroom / exit row */
-  .s-recliner       { border-color: #1a73e8; color: #0d5cb6; background: #f2f7ff; }
+  .s-recliner       { background: #8b1a1a; border-color: #6d1414; color: #fff; }   /* dark red fill */
   .s-non-reclining  { border-color: #d32f2f; color: #b71c1c; background: #fff6f6; }
   .s-occ   { border-color: #e2e2e2; background: #f3f4f6; color: #9aa0a6; cursor: not-allowed; font-size: 18px; }
   .s-blocked { border-color: #e2e2e2; background: #f3f4f6; color: #bbb; cursor: not-allowed; font-size: 18px; }
   .s-sel   { background: #1a73e8; border-color: #0d5cb6; color: #fff; }
   .s-empty { background: transparent; border-color: transparent; cursor: default; pointer-events: none; }
 
-  /* window fuselage curve on the outermost seats */
-  .seat.window-edge::after {
-    content: ''; position: absolute; right: -6px; top: 3px; bottom: 3px; width: 8px;
-    border-right: 2px solid #d94b3a; border-top-right-radius: 10px; border-bottom-right-radius: 10px;
-  }
+  /* A+ is a BORDER modifier so it can stack on top of any face,
+     including the dark-red recliner fill (A+ recliner = gold ring + dark red). */
+  .seat.s-aplus { border-color: #c9a227; color: #a8791a; }
+  .seat.s-aplus.s-recliner { color: #ffd970; }
+  .seat.s-aplus.s-sel, .seat.s-sel { color: #fff; }
 
   /* ── BOTTOM BAR ── */
   .bottom-bar { background: #fff; border-top: 2px solid #e5e7eb; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; bottom: 0; z-index: 100; }
@@ -119,20 +127,24 @@
 
   @media (max-width: 768px) {
     .cabin { gap: 3px; }
-    .row-col { gap: 3px; }
+    .seat-row, .col-headers { grid-template-columns: 26px repeat(3, 42px) 18px repeat(3, 42px) 26px; column-gap: 3px; }
     .seat { width: 42px; height: 34px; font-size: 10px; border-radius: 7px; }
-    .row-num { font-size: 12px; }
-    .exit-bar, .exit-slot { height: 18px; font-size: 10px; }
-    .aisle-gap { height: 18px; }
+    .row-num, .col-hdr { font-size: 11px; }
+    .aisle-gap { width: 18px; }
+    .exit-bar { width: 24px; height: 37px; font-size: 9px; margin-bottom: -3px; }
+    .exit-bar.end { height: 34px; margin-bottom: 0; }
     .promo-text { font-size: 12px; }
     .leg-item { font-size: 11px; }
     .bottom-bar { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
     .btn-action { padding: 8px 14px; font-size: 12px; }
   }
   @media (max-width: 480px) {
-    .seat { width: 36px; height: 30px; font-size: 9px; }
     .cabin { gap: 2px; }
-    .row-col { gap: 2px; }
+    .seat-row, .col-headers { grid-template-columns: 22px repeat(3, 36px) 14px repeat(3, 36px) 22px; column-gap: 2px; }
+    .seat { width: 36px; height: 30px; font-size: 9px; }
+    .aisle-gap { width: 14px; }
+    .exit-bar { width: 20px; height: 32px; margin-bottom: -2px; }
+    .exit-bar.end { height: 30px; margin-bottom: 0; }
   }
 </style>
 </head>
@@ -156,7 +168,8 @@
   <div class="legend">
     <div class="leg-item"><div class="leg-swatch" style="border-color:#c9a227;"></div> A+</div>
     <div class="leg-item"><div class="leg-swatch" style="border-color:#d32f2f;background:#fff6f6;"></div> Non-reclining</div>
-    <div class="leg-item"><div class="leg-swatch" style="border-color:#1a73e8;background:#f2f7ff;"></div> Recliner</div>
+    <div class="leg-item"><div class="leg-swatch" style="border-color:#6d1414;background:#8b1a1a;"></div> Recliner</div>
+    <div class="leg-item"><div class="leg-swatch" style="border-color:#c9a227;background:#8b1a1a;"></div> A+ Recliner</div>
     <div class="leg-item"><div class="leg-swatch" style="border-color:#bfc3c8;background:#f3f4f6;color:#777;">✕</div> Occupied</div>
     <div class="leg-item"><div class="leg-swatch" style="border-color:#2e9e5b;"></div> Free Seat</div>
   </div>
@@ -554,40 +567,60 @@ function renderSeatMap({ rowMap, sortedRows }) {
   const cabin = document.createElement('div');
   cabin.className = 'cabin';
 
-  const exitFlags = sortedRows.map(r =>
-    Object.values(rowMap[r] ?? {}).some(s => s?.isExit)
-  );
+  // column header: (gutter) A B C | D E F (gutter)
+  const hdr = document.createElement('div');
+  hdr.className = 'col-headers';
+  hdr.appendChild(document.createElement('div'));
+  LEFT.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'col-hdr'; d.textContent = c; hdr.appendChild(d);
+  });
+  const hGap = document.createElement('div');
+  hGap.className = 'aisle-gap';
+  hdr.appendChild(hGap);
+  RIGHT.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'col-hdr'; d.textContent = c; hdr.appendChild(d);
+  });
+  hdr.appendChild(document.createElement('div'));
+  cabin.appendChild(hdr);
+
+  const exitFlags = sortedRows.map(r => Object.values(rowMap[r] ?? {}).some(s => s?.isExit));
 
   sortedRows.forEach((rowNum, idx) => {
     const rowData = rowMap[rowNum] ?? {};
-    const col = document.createElement('div');
-    col.className = 'row-col';
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'seat-row';
 
     const isExit = exitFlags[idx];
     const prevExit = idx > 0 && exitFlags[idx - 1];
     const nextExit = idx < exitFlags.length - 1 && exitFlags[idx + 1];
 
-    col.appendChild(buildExitSlot(isExit, !prevExit, !nextExit));
+    // left gutter: exit bar, else row number
+    rowDiv.appendChild(isExit ? buildExitSlot(true, !prevExit, !nextExit) : buildRowNum(rowNum));
 
-    LEFT.forEach((c, i) => col.appendChild(buildSeat(rowData[c], rowNum, c, i === 0)));
+    LEFT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
 
     const gap = document.createElement('div');
     gap.className = 'aisle-gap';
-    col.appendChild(gap);
+    rowDiv.appendChild(gap);
 
-    RIGHT.forEach((c, i) => col.appendChild(buildSeat(rowData[c], rowNum, c, i === RIGHT.length - 1)));
+    RIGHT.forEach(c => rowDiv.appendChild(buildSeat(rowData[c], rowNum, c)));
 
-    col.appendChild(buildExitSlot(isExit, !prevExit, !nextExit));
+    // right gutter: exit bar on exit rows, row number otherwise
+    rowDiv.appendChild(isExit ? buildExitSlot(true, !prevExit, !nextExit) : buildRowNum(rowNum));
 
-    const num = document.createElement('div');
-    num.className = 'row-num';
-    num.textContent = rowNum;
-    col.appendChild(num);
-
-    cabin.appendChild(col);
+    cabin.appendChild(rowDiv);
   });
 
   root.appendChild(cabin);
+}
+
+function buildRowNum(rowNum) {
+  const d = document.createElement('div');
+  d.className = 'row-num';
+  d.textContent = rowNum;
+  return d;
 }
 
 function buildExitSlot(isExit, isStart, isEnd) {
@@ -602,15 +635,20 @@ function buildExitSlot(isExit, isStart, isEnd) {
   return slot;
 }
 
-function seatFaceClass(info) {
-  if (info.isLeg || info.isExit) return 's-leg';
-  if (info.isRecliner) return 's-recliner';
-  if (info.isNonReclining) return 's-non-reclining';
-  if (Number(info.price) === 0) return 's-free';
-  return 's-std';
+/* Returns an array of classes: one background face + optional A+ border ring,
+   so an "A+ recliner" seat shows the gold ring AND the dark-red recliner fill. */
+function seatFaceClasses(info) {
+  const out = [];
+  if (info.isRecliner) out.push('s-recliner');
+  else if (info.isNonReclining) out.push('s-non-reclining');
+  else if (Number(info.price) === 0) out.push('s-free');
+  else out.push('s-std');
+
+  if (info.isLeg || info.isExit) out.push('s-aplus');
+  return out;
 }
 
-function buildSeat(info, rowNum, colLetter, isOuter) {
+function buildSeat(info, rowNum, colLetter) {
   const div = document.createElement('div');
   div.className = 'seat';
 
@@ -623,11 +661,9 @@ function buildSeat(info, rowNum, colLetter, isOuter) {
     div.textContent = '✕';
     div.title = `${info.des} — Occupied`;
   } else {
-    div.classList.add(seatFaceClass(info));
+    div.classList.add(...seatFaceClasses(info));
     div.textContent = Number(info.price) === 0 ? 'Free' : '₹' + Number(info.price).toLocaleString('en-IN');
   }
-
-  if (isOuter && info.isWindow) div.classList.add('window-edge');
 
   div.dataset.rowCol = `${rowNum}${colLetter}`;
   div.dataset.price = info.price;
@@ -679,7 +715,7 @@ function handleSeatClick(div, info, rowNum, colLetter) {
 
 function refreshSeatVisuals() {
   const seats = flightSeats() || {};
-  const FACES = ['s-sel', 's-blocked', 's-std', 's-free', 's-leg', 's-recliner', 's-non-reclining'];
+  const FACES = ['s-sel', 's-blocked', 's-std', 's-free', 's-leg', 's-aplus', 's-recliner', 's-non-reclining'];
 
   document.querySelectorAll('.seat').forEach(seat => {
     const rc = seat.dataset.rowCol;
@@ -703,7 +739,7 @@ function refreshSeatVisuals() {
       seat.classList.add('s-blocked');
       seat.textContent = '✕';
     } else {
-      seat.classList.add(seatFaceClass({
+      seat.classList.add(...seatFaceClasses({
         isLeg: seat.dataset.isLeg === '1',
         isExit: seat.dataset.isExit === '1',
         isRecliner: seat.dataset.isRecliner === '1',
