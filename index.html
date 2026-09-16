@@ -88,8 +88,7 @@
 
   /* ── SEAT ──
      Matches the real seat button: border on top/right/left only (no bottom),
-     10px radius, and a FLAT offset box-shadow (no blur/spread) as the color
-     accent that pokes out on the right edge — not a glow/ring. */
+     10px radius, with a thin flat color accent extending from the back edge. */
   .seat {
     --seat-accent: #d9d9d9; /* neutral default */
     width: 54px; height: 44px; border-radius: 10px;
@@ -101,16 +100,17 @@
     transition: none;
     overflow: visible;
   }
-  /* Thin rear/back accent — visible in the normal state, with no hover needed. */
+  /* Thin rear/back accent — always visible below the seat, matching the
+     website's seat accent after rotating the cabin orientation vertically. */
   .seat::after {
      content: '';
      position: absolute;
-     top: 4px;
-     right: -3px;
-     width: 3px;
-     height: 36px;
+     left: 4px;
+     right: 4px;
+     bottom: -3px;
+     height: 3px;
      background: var(--seat-accent);
-     border-radius: 0 6px 6px 0;
+     border-radius: 0 0 7px 7px;
      z-index: 0;
      pointer-events: none;
   }
